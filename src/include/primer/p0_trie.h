@@ -38,10 +38,7 @@ class TrieNode {
    *
    * @param key_char Key character of this trie node
    */
-  explicit TrieNode(char key_char) {
-    key_char_ = key_char;
-    is_end_ = false;
-  }
+  explicit TrieNode(char key_char) { key_char_ = key_char; }
 
   /**
    * TrieNode - Move old trie node's value to a new trie node
@@ -52,9 +49,6 @@ class TrieNode {
    * @param other_trie_node Old trie node.
    */
   TrieNode(TrieNode &&other_trie_node) noexcept {
-    key_char_ = other_trie_node.key_char_;
-    is_end_ = other_trie_node.is_end_;
-
     for (auto i = other_trie_node.children_.begin(); i != other_trie_node.children_.end() && !i->second->IsEndNode();
          ++i) {
       children_[i->first] = std::move(i->second);
@@ -62,6 +56,8 @@ class TrieNode {
     }
 
     // not necessary in my opinion
+    key_char_ = other_trie_node.key_char_;
+    is_end_ = other_trie_node.is_end_;
     other_trie_node.key_char_ = '\0';
     other_trie_node.is_end_ = true;
   }
@@ -207,7 +203,7 @@ class TrieNodeWithValue : public TrieNode {
 
  public:
   /**
-   * TODO(P0): Add implementation
+   * TrieNodeWithValue - Transfer a TrieNode to a terminal node and specify its value
    *
    * @brief Construct a new TrieNodeWithValue object from a TrieNode object and specify its value.
    * This is used when a non-terminal TrieNode is converted to terminal TrieNodeWithValue.
@@ -224,10 +220,13 @@ class TrieNodeWithValue : public TrieNode {
    * @param trieNode TrieNode whose data is to be moved to TrieNodeWithValue
    * @param value
    */
-  TrieNodeWithValue(TrieNode &&trieNode, T value) {}
+  TrieNodeWithValue(TrieNode &&trieNode, T value) : TrieNode(std::move(trieNode)) {
+    value_ = value;
+    is_end_ = true;
+  }
 
   /**
-   * TODO(P0): Add implementation
+   * TrieNodeWithValue - Construct a new TrieNodeWithValue from the start
    *
    * @brief Construct a new TrieNodeWithValue. This is used when a new terminal node is constructed.
    *
@@ -239,7 +238,10 @@ class TrieNodeWithValue : public TrieNode {
    * @param key_char Key char of this node
    * @param value Value of this node
    */
-  TrieNodeWithValue(char key_char, T value) {}
+  TrieNodeWithValue(char key_char, T value) : TrieNode(key_char){
+    value_ = value;
+    is_end_ = true;
+  }
 
   /**
    * @brief Destroy the Trie Node With Value object

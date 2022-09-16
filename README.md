@@ -17,3 +17,7 @@ Before starting, read the debug info in *src/include/common/logger.h*.
   unique_ptr to a new TrieNode
 
 Others are normal stuff.
+
+### TrieNodeWithValue Class
+
+Use a initialize list to init base members.
