@@ -278,7 +278,12 @@ class Trie {
    * @brief Construct a new Trie object. Initialize the root node with '\0'
    * character.
    */
-  Trie() { root_ = std::make_unique<TrieNode>('\0'); }
+  Trie() {
+#ifdef LOG_DEBUG_ENABLED
+    std::cout << "== Init: Trie" << std::endl;
+#endif
+    root_ = std::make_unique<TrieNode>('\0');
+  }
 
   /**
    * Insert - Insert (key, value) into the trie
