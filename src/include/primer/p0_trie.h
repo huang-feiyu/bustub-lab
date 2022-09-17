@@ -314,12 +314,14 @@ class Trie {
     std::unique_ptr<TrieNode> *prev;
     std::unique_ptr<TrieNode> *ptr = &root_;
     for (auto ch : key) {
+      LOG_DEBUG("ch: [%c]", ch);
       assert(ptr != nullptr);
       prev = ptr;
       ptr = (*prev)->GetChildNode(ch);
       if (ptr == nullptr) {
         // weird: I cannot use std::make_unique
-        ptr = (*prev)->InsertChildNode(ch, std::unique_ptr<TrieNode>(new TrieNode(ch)));
+        LOG_DEBUG("insert: [%c]", ch);
+        ptr = (*prev)->InsertChildNode(ch, std::make_unique<TrieNode>(ch));
       }
     }
 
@@ -330,8 +332,8 @@ class Trie {
     }
     // case 1 | 2: non-terminal node
     (*prev)->RemoveChildNode((*ptr)->GetKeyChar());
-    (*prev)->InsertChildNode(*key.end().base(),
-                             std::unique_ptr<TrieNodeWithValue<T>>(new TrieNodeWithValue(*key.end().base(), value)));
+    (*prev)->InsertChildNode(*(key.end() - 1).base(),
+                             std::make_unique<TrieNodeWithValue<T>>(*(key.end() - 1).base(), value));
     PrintTrie();
     return true;
   }
@@ -421,7 +423,7 @@ class Trie {
     }
 
     auto rawptr = ptr->operator->();
-    auto *terminal = dynamic_cast<TrieNodeWithValue<T> *>(rawptr);
+    auto terminal = dynamic_cast<TrieNodeWithValue<T> *>(rawptr);
     if (terminal == nullptr) {
       *success = false;
       return {};
@@ -439,7 +441,7 @@ class Trie {
     }
     printf("%s [%c]\n", prefix.c_str(), (*node)->GetKeyChar());
     if ((*node)->HasChildren()) {
-      for (auto & i : (*node)->children_) {
+      for (auto &i : (*node)->children_) {
         PrintTrieR(&i.second, level + 1);
       }
     }
@@ -447,6 +449,7 @@ class Trie {
   void PrintTrie() {
 #ifdef LOG_DEBUG_ENABLED
     PrintTrieR(&root_, 0);
+    printf("\n");
 #endif
   }
 };

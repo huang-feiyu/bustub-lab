@@ -22,3 +22,16 @@ Others are normal stuff.
 Use an initialize list to init base members.
 
 ### Trie Class
+
+Normal stuff. It's weird that I cannot use `std::make_unique` sometimes.
+
+### DEBUG
+
+<b>*</b> insert last failed => bug01
+
+```c
+- (*prev)->InsertChildNode(*key.end().base(),
+-                          std::make_unique<TrieNodeWithValue<T>>(*key.end().base(), value));
++ (*prev)->InsertChildNode(*(key.end() - 1).base(),
++                          std::make_unique<TrieNodeWithValue<T>>(*(key.end() - 1).base(), value));
+```
