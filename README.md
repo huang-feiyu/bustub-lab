@@ -77,3 +77,14 @@ auto tml_node = std::make_unique<TrieNodeWithValue<T>>(std::move(*temp_node), va
 * `GetValue`: `RwLatch->RLock()`
 * `Insert`: `RWLatch->WLock()`
 * `Remove`: `RwLatch->WLock()`
+
+Easy to implement.
+
+---
+
+```
+Time:   9 Hours
+Score:  100/100
+Author: Huang
+Date:   2022-09-17
+```
