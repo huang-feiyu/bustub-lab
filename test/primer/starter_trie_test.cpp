@@ -177,49 +177,6 @@ TEST(StarterTest, TrieInsertTest2) {
   }
 }
 
-/*
- * == Insert: (abc,d)
-== GetValue: abc
-== Insert: (,d)
-== GetValue:
-== Insert: (abc,5)
-== Insert: (abc,6)
-== GetValue: abc
-== Insert: (a,5)
-== Insert: (aa,6)
-== Insert: (aaa,7)
-== GetValue: a
-== GetValue: aa
-== GetValue: aaa
-== GetValue: aaaa
-== Insert: (aaa,5)
-== Insert: (aa,6)
-== Insert: (a,7)
-== GetValue: aaaa
-== GetValue: aaa
-/autograder/bustub/test/primer/grading_starter_trie_test.cpp:251: Failure
-Expected equality of these values:
-  trie.GetValue<int>("aaa", &success)
-    Which is: 0
-  5
-/autograder/bustub/test/primer/grading_starter_trie_test.cpp:252: Failure
-Expected equality of these values:
-  success
-    Which is: false
-  true
-== GetValue: aa
-/autograder/bustub/test/primer/grading_starter_trie_test.cpp:253: Failure
-Expected equality of these values:
-  trie.GetValue<int>("aa", &success)
-    Which is: 0
-  6
-/autograder/bustub/test/primer/grading_starter_trie_test.cpp:254: Failure
-Expected equality of these values:
-  success
-    Which is: false
-  true
- */
-
 TEST(StarterTrieTest, RemoveTest) {
   {
     Trie trie;
@@ -253,7 +210,7 @@ TEST(StarterTrieTest, RemoveTest) {
   }
 }
 
-TEST(StarterTrieTest, DISABLED_ConcurrentTest1) {
+TEST(StarterTrieTest, ConcurrentTest1) {
   Trie trie;
   constexpr int num_words = 1000;
   constexpr int num_bits = 10;

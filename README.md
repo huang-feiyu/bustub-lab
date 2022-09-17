@@ -70,3 +70,10 @@ auto tml_node = std::make_unique<TrieNodeWithValue<T>>(std::move(*temp_node), va
 (*prev)->RemoveChildNode(*(key.end() - 1).base());
 (*prev)->InsertChildNode(*(key.end() - 1).base(), std::move(tml_node));
 ```
+
+
+## CONCURRENT TRIE
+
+* `GetValue`: `RwLatch->RLock()`
+* `Insert`: `RWLatch->WLock()`
+* `Remove`: `RwLatch->WLock()`

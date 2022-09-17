@@ -24,7 +24,9 @@
 #include "common/logger.h"
 #include "common/rwlatch.h"
 
-#define OWN_DEBUG
+// to prevent taking a long time
+// #define OWN_DEBUG_VERBOSE
+// #define OWN_DEBUG
 
 namespace bustub {
 
@@ -52,7 +54,7 @@ class TrieNode {
    * @param other_trie_node Old trie node.
    */
   TrieNode(TrieNode &&other_trie_node) noexcept {
-    for (auto & i : other_trie_node.children_) {
+    for (auto &i : other_trie_node.children_) {
       children_[i.first] = std::move(i.second);
       i.second = nullptr;  // avoid free multiple times
     }
@@ -129,11 +131,15 @@ class TrieNode {
   std::unique_ptr<TrieNode> *InsertChildNode(char key_char, std::unique_ptr<TrieNode> &&child) {
     assert(child != nullptr);
     if (HasChild(key_char)) {
+#ifdef OWN_DEBUG
       LOG_DEBUG("InsertChildNode: Insert multiple times [%c]", key_char);
+#endif
       return nullptr;
     }
     if (child->key_char_ != key_char) {
+#ifdef OWN_DEBUG
       LOG_DEBUG("InsertChildNode: Consistent error key:[%c], child:[%c]", key_char, child->key_char_);
+#endif
       return nullptr;
     }
 
@@ -278,7 +284,7 @@ class Trie {
    * character.
    */
   Trie() {
-#ifdef LOG_DEBUG_ENABLED
+#ifdef OWN_DEBUG
     std::cout << "== Init: Trie" << std::endl;
 #endif
     root_ = std::make_unique<TrieNode>('\0');
@@ -313,13 +319,15 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
-#ifdef LOG_DEBUG_ENABLED
+#ifdef OWN_DEBUG
     std::cout << "== Insert: (" << key << "," << value << ")" << std::endl;
 #endif
     if (key.empty()) {
       return false;
     }
     PrintTrie<T>();
+
+    latch_.WLock();
 
     std::unique_ptr<TrieNode> *prev;
     std::unique_ptr<TrieNode> *ptr = &root_;
@@ -342,6 +350,7 @@ class Trie {
     if (ptr != nullptr) {
       if ((*ptr)->IsEndNode()) {
         // case 3: terminal node
+        latch_.WUnlock();
         return false;
       }
       // case 2: non-terminal node
@@ -351,6 +360,7 @@ class Trie {
       (*prev)->InsertChildNode(*(key.end() - 1).base(), std::move(tml_node));
     }
 
+    latch_.WUnlock();
     PrintTrie<T>();
     return true;
   }
@@ -373,23 +383,26 @@ class Trie {
    * @return True if key exists and is removed, false otherwise
    */
   bool Remove(const std::string &key) {
-#ifdef LOG_DEBUG_ENABLED
+#ifdef OWN_DEBUG
     std::cout << "== Remove: " << key << std::endl;
 #endif
     if (key.empty()) {
       return false;
     }
+    latch_.RLock();
 
     std::stack<std::unique_ptr<TrieNode> *> stack;
     std::unique_ptr<TrieNode> *ptr = &root_;
     for (auto ch : key) {
       if (ptr == nullptr) {
+        latch_.RUnlock();
         return false;
       }
       stack.push(ptr);
       ptr = (*ptr)->GetChildNode(ch);
     }
     if (ptr == nullptr) {
+      latch_.RUnlock();
       return false;
     }
 
@@ -401,6 +414,8 @@ class Trie {
       (*prev)->RemoveChildNode((*ptr)->GetKeyChar());
       ptr = prev;
     }
+
+    latch_.RUnlock();
     return true;
   }
 
@@ -424,7 +439,7 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
-#ifdef LOG_DEBUG_ENABLED
+#ifdef OWN_DEBUG
     std::cout << "== GetValue: " << key << std::endl;
 #endif
     if (key.empty()) {
@@ -432,16 +447,19 @@ class Trie {
       return {};
     }
     PrintTrie<T>();
+    latch_.WLock();
 
     auto *ptr = &root_;
     for (auto ch : key) {
       if (ptr == nullptr) {
+        latch_.WUnlock();
         *success = false;
         return {};
       }
       ptr = (*ptr)->GetChildNode(ch);
     }
     if (ptr == nullptr) {
+      latch_.WUnlock();
       *success = false;
       return {};
     }
@@ -449,10 +467,12 @@ class Trie {
     auto rawptr = ptr->operator->();
     auto terminal = dynamic_cast<TrieNodeWithValue<T> *>(rawptr);
     if (terminal == nullptr) {
+      latch_.WUnlock();
       *success = false;
       return {};
     }
 
+    latch_.WUnlock();
     *success = true;
     return terminal->GetValue();
   }
@@ -481,7 +501,7 @@ class Trie {
   }
   template <typename T>
   void PrintTrie() {
-#ifdef OWN_DEBUG
+#ifdef OWN_DEBUG_VERBOSE
     PrintTrieR<T>(&root_, 0);
     printf("\n");
 #endif
