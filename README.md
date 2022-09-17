@@ -10,3 +10,5 @@
 
 ## Assignments
 
+* [p0](https://github.com/huang-feiyu/bustub-labs/tree/p0): C++ Primer (**100/100**)
+
