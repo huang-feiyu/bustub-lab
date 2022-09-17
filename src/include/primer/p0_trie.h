@@ -24,7 +24,7 @@
 #include "common/logger.h"
 #include "common/rwlatch.h"
 
-// #define OWN_DEBUG
+#define OWN_DEBUG
 
 namespace bustub {
 
@@ -52,10 +52,9 @@ class TrieNode {
    * @param other_trie_node Old trie node.
    */
   TrieNode(TrieNode &&other_trie_node) noexcept {
-    for (auto i = other_trie_node.children_.begin(); i != other_trie_node.children_.end() && !i->second->IsEndNode();
-         ++i) {
-      children_[i->first] = std::move(i->second);
-      i->second = nullptr;  // avoid free multiple times
+    for (auto & i : other_trie_node.children_) {
+      children_[i.first] = std::move(i.second);
+      i.second = nullptr;  // avoid free multiple times
     }
 
     // not necessary in my opinion
@@ -283,6 +282,7 @@ class Trie {
     std::cout << "== Init: Trie" << std::endl;
 #endif
     root_ = std::make_unique<TrieNode>('\0');
+    PrintTrie<int>();
   }
 
   /**
@@ -323,24 +323,34 @@ class Trie {
 
     std::unique_ptr<TrieNode> *prev;
     std::unique_ptr<TrieNode> *ptr = &root_;
-    for (auto ch : key) {
+    for (auto ch = key.begin(); ch != key.end(); ++ch) {
       assert(ptr != nullptr);
       prev = ptr;
-      ptr = (*prev)->GetChildNode(ch);
-      if (ptr == nullptr) {
-        ptr = (*prev)->InsertChildNode(ch, std::make_unique<TrieNode>(ch));
+      ptr = (*prev)->GetChildNode(*ch.base());
+      if (ptr == nullptr && ch != key.end() - 1) {
+        // do not add at the end
+        ptr = (*prev)->InsertChildNode(*ch.base(), std::make_unique<TrieNode>(*ch.base()));
       }
     }
 
-    assert(prev != nullptr && ptr != nullptr);  // always insert when meet an empty node
-    if ((*ptr)->IsEndNode()) {
-      // case 3: terminal node
-      return false;
+    assert(prev != nullptr);
+    if (ptr == nullptr) {
+      // case 1: no such node
+      (*prev)->InsertChildNode(*(key.end() - 1).base(),
+                               std::make_unique<TrieNodeWithValue<T>>(*(key.end() - 1).base(), value));
     }
-    // case 1 | 2: non-terminal node
-    (*prev)->RemoveChildNode((*ptr)->GetKeyChar());
-    (*prev)->InsertChildNode(*(key.end() - 1).base(),
-                             std::make_unique<TrieNodeWithValue<T>>(*(key.end() - 1).base(), value));
+    if (ptr != nullptr) {
+      if ((*ptr)->IsEndNode()) {
+        // case 3: terminal node
+        return false;
+      }
+      // case 2: non-terminal node
+      auto temp_node = std::move(*ptr);
+      auto tml_node = std::make_unique<TrieNodeWithValue<T>>(std::move(*temp_node), value);
+      (*prev)->RemoveChildNode(*(key.end() - 1).base());
+      (*prev)->InsertChildNode(*(key.end() - 1).base(), std::move(tml_node));
+    }
+
     PrintTrie<T>();
     return true;
   }

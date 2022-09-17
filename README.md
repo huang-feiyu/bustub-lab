@@ -5,6 +5,7 @@
 ## TEMPLATED TRIE
 
 Before starting, read the debug info in *src/include/common/logger.h*.
+
 * ERROR > WARN > INFO > DEBUG > TRACE (Refers to
   [When to use different log levels](https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels))
 
@@ -27,11 +28,45 @@ Normal stuff. It's weird that I cannot use `std::make_unique` sometimes.
 
 ### DEBUG
 
-<b>*</b> insert last failed => bug01
+<b>*</b> insert last letter failed => bug01
 
 ```c
 - (*prev)->InsertChildNode(*key.end().base(),
 -                          std::make_unique<TrieNodeWithValue<T>>(*key.end().base(), value));
 + (*prev)->InsertChildNode(*(key.end() - 1).base(),
 +                          std::make_unique<TrieNodeWithValue<T>>(*(key.end() - 1).base(), value));
+```
+
+<b>*</b> insert lost => bug02
+
+When I remove node from children, I also remove node's children.
+
+```output
+== Init: Trie                                                                                                                           
+[.]
+
+== Insert: (aaa,5)                                                                                                                      
+[.]                                                                                                                                     
+  [a]                                                                                                                                   
+    [a]                                                                                                                                 
+      [a](5)                                                                                                                            
+      
+== Insert: (aa,6)                                                                                                                       
+[.]                                                                                                                                     
+  [a]                                                                                                                                   
+    [a](6)                                                                                                                              
+    
+== Insert: (a,7)                                                                                                                        
+[.]                                                                                                                                     
+  [a](7)
+```
+
+Wierd C++ grammer:
+
+```c++
+// case 2: non-terminal node
+auto temp_node = std::move(*ptr);
+auto tml_node = std::make_unique<TrieNodeWithValue<T>>(std::move(*temp_node), value);
+(*prev)->RemoveChildNode(*(key.end() - 1).base());
+(*prev)->InsertChildNode(*(key.end() - 1).base(), std::move(tml_node));
 ```
