@@ -7,7 +7,6 @@
 Before starting, read the debug info in *src/include/common/logger.h*.
 * ERROR > WARN > INFO > DEBUG > TRACE (Refers to
   [When to use different log levels](https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels))
-* 
 
 ### TrieNode Class
 
@@ -20,4 +19,6 @@ Others are normal stuff.
 
 ### TrieNodeWithValue Class
 
-Use a initialize list to init base members.
+Use an initialize list to init base members.
+
+### Trie Class

@@ -13,6 +13,7 @@
 #pragma once
 
 #include <memory>
+#include <stack>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -188,6 +189,7 @@ class TrieNode {
   bool is_end_{false};
   /** A map of all child nodes of this trie node, which can be accessed by each
    * child node's key char. */
+ public:
   std::unordered_map<char, std::unique_ptr<TrieNode>> children_;
 };
 
@@ -238,7 +240,7 @@ class TrieNodeWithValue : public TrieNode {
    * @param key_char Key char of this node
    * @param value Value of this node
    */
-  TrieNodeWithValue(char key_char, T value) : TrieNode(key_char){
+  TrieNodeWithValue(char key_char, T value) : TrieNode(key_char) {
     value_ = value;
     is_end_ = true;
   }
@@ -269,21 +271,21 @@ class Trie {
 
  public:
   /**
-   * TODO(P0): Add implementation
+   * Trie - Init a new trie with root node with '\0'
    *
    * @brief Construct a new Trie object. Initialize the root node with '\0'
    * character.
    */
-  Trie() = default;
+  Trie() { root_ = std::make_unique<TrieNode>('\0'); }
 
   /**
-   * TODO(P0): Add implementation
+   * Insert - Insert (key, value) into the trie
    *
    * @brief Insert key-value pair into the trie.
    *
    * If key is empty string, return false immediately.
    *
-   * If key alreadys exists, return false. Duplicated keys are not allowed and
+   * If key already exists, return false. Duplicated keys are not allowed and
    * you should never overwrite value of an existing key.
    *
    * When you reach the ending character of a key:
@@ -304,11 +306,38 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
-    return false;
+    if (key.empty()) {
+      return false;
+    }
+    PrintTrie();
+
+    std::unique_ptr<TrieNode> *prev;
+    std::unique_ptr<TrieNode> *ptr = &root_;
+    for (auto ch : key) {
+      assert(ptr != nullptr);
+      prev = ptr;
+      ptr = (*prev)->GetChildNode(ch);
+      if (ptr == nullptr) {
+        // weird: I cannot use std::make_unique
+        ptr = (*prev)->InsertChildNode(ch, std::unique_ptr<TrieNode>(new TrieNode(ch)));
+      }
+    }
+
+    assert(prev != nullptr && ptr != nullptr);  // always insert when meet an empty node
+    if ((*ptr)->IsEndNode()) {
+      // case 3: terminal node
+      return false;
+    }
+    // case 1 | 2: non-terminal node
+    (*prev)->RemoveChildNode((*ptr)->GetKeyChar());
+    (*prev)->InsertChildNode(*key.end().base(),
+                             std::unique_ptr<TrieNodeWithValue<T>>(new TrieNodeWithValue(*key.end().base(), value)));
+    PrintTrie();
+    return true;
   }
 
   /**
-   * TODO(P0): Add implementation
+   * GetValue - Remove (key, T) from the trie, return true if success, false if fail
    *
    * @brief Remove key value pair from the trie.
    * This function should also remove nodes that are no longer part of another
@@ -324,10 +353,37 @@ class Trie {
    * @param key Key used to traverse the trie and find correct node
    * @return True if key exists and is removed, false otherwise
    */
-  bool Remove(const std::string &key) { return false; }
+  bool Remove(const std::string &key) {
+    if (key.empty()) {
+      return false;
+    }
+
+    std::stack<std::unique_ptr<TrieNode> *> stack;
+    std::unique_ptr<TrieNode> *ptr = &root_;
+    for (auto ch : key) {
+      if (ptr == nullptr) {
+        return false;
+      }
+      stack.push(ptr);
+      ptr = (*ptr)->GetChildNode(ch);
+    }
+    if (ptr == nullptr) {
+      return false;
+    }
+
+    (*ptr)->SetEndNode(false);
+    std::unique_ptr<TrieNode> *prev;
+    while ((*ptr)->GetKeyChar() != '\0' && !(*ptr)->HasChildren() && !stack.empty()) {
+      prev = stack.top();
+      stack.pop();
+      (*prev)->RemoveChildNode((*ptr)->GetKeyChar());
+      ptr = prev;
+    }
+    return true;
+  }
 
   /**
-   * TODO(P0): Add implementation
+   * GetValue - Return the value of specific key
    *
    * @brief Get the corresponding value of type T given its key.
    * If key is empty, set success to false.
@@ -346,8 +402,52 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
-    *success = false;
-    return {};
+    if (key.empty()) {
+      *success = false;
+      return {};
+    }
+
+    auto *ptr = &root_;
+    for (auto ch : key) {
+      if (ptr == nullptr) {
+        *success = false;
+        return {};
+      }
+      ptr = (*ptr)->GetChildNode(ch);
+    }
+    if (ptr == nullptr) {
+      *success = false;
+      return {};
+    }
+
+    auto rawptr = ptr->operator->();
+    auto *terminal = dynamic_cast<TrieNodeWithValue<T> *>(rawptr);
+    if (terminal == nullptr) {
+      *success = false;
+      return {};
+    }
+
+    *success = true;
+    return terminal->GetValue();
+  }
+
+ private:
+  void PrintTrieR(std::unique_ptr<TrieNode> *node, int level) {
+    std::string prefix;
+    for (int i = 0; i < level; i++) {
+      prefix += "  ";
+    }
+    printf("%s [%c]\n", prefix.c_str(), (*node)->GetKeyChar());
+    if ((*node)->HasChildren()) {
+      for (auto & i : (*node)->children_) {
+        PrintTrieR(&i.second, level + 1);
+      }
+    }
+  }
+  void PrintTrie() {
+#ifdef LOG_DEBUG_ENABLED
+    PrintTrieR(&root_, 0);
+#endif
   }
 };
 }  // namespace bustub
