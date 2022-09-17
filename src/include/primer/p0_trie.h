@@ -306,21 +306,22 @@ class Trie {
    */
   template <typename T>
   bool Insert(const std::string &key, T value) {
+#ifdef LOG_DEBUG_ENABLED
+    std::cout << "== Insert: (" << key << "," << value << ")" << std::endl;
+#endif
     if (key.empty()) {
       return false;
     }
-    PrintTrie();
+    PrintTrie<T>();
 
     std::unique_ptr<TrieNode> *prev;
     std::unique_ptr<TrieNode> *ptr = &root_;
     for (auto ch : key) {
-      LOG_DEBUG("ch: [%c]", ch);
       assert(ptr != nullptr);
       prev = ptr;
       ptr = (*prev)->GetChildNode(ch);
       if (ptr == nullptr) {
         // weird: I cannot use std::make_unique
-        LOG_DEBUG("insert: [%c]", ch);
         ptr = (*prev)->InsertChildNode(ch, std::make_unique<TrieNode>(ch));
       }
     }
@@ -334,7 +335,7 @@ class Trie {
     (*prev)->RemoveChildNode((*ptr)->GetKeyChar());
     (*prev)->InsertChildNode(*(key.end() - 1).base(),
                              std::make_unique<TrieNodeWithValue<T>>(*(key.end() - 1).base(), value));
-    PrintTrie();
+    PrintTrie<T>();
     return true;
   }
 
@@ -356,6 +357,7 @@ class Trie {
    * @return True if key exists and is removed, false otherwise
    */
   bool Remove(const std::string &key) {
+    LOG_DEBUG("\n== Remove: %s\n", key.c_str());
     if (key.empty()) {
       return false;
     }
@@ -404,10 +406,12 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
+    LOG_DEBUG("\n== GetValue: %s", key.c_str());
     if (key.empty()) {
       *success = false;
       return {};
     }
+    PrintTrie<T>();
 
     auto *ptr = &root_;
     for (auto ch : key) {
@@ -434,21 +438,31 @@ class Trie {
   }
 
  private:
+  template <typename T>
   void PrintTrieR(std::unique_ptr<TrieNode> *node, int level) {
     std::string prefix;
     for (int i = 0; i < level; i++) {
       prefix += "  ";
     }
-    printf("%s [%c]\n", prefix.c_str(), (*node)->GetKeyChar());
+    printf("%s[%c]", prefix.c_str(), (*node)->GetKeyChar() == '\0' ? '.' : (*node)->GetKeyChar());
+    if ((*node)->IsEndNode()) {
+      auto rawptr = node->operator->();
+      auto terminal = dynamic_cast<TrieNodeWithValue<T> *>(rawptr);
+      if (terminal != nullptr) {
+        std::cout << "(" << terminal->GetValue() << ")";
+      }
+    }
+    printf("\n");
     if ((*node)->HasChildren()) {
       for (auto &i : (*node)->children_) {
-        PrintTrieR(&i.second, level + 1);
+        PrintTrieR<T>(&i.second, level + 1);
       }
     }
   }
+  template <typename T>
   void PrintTrie() {
 #ifdef LOG_DEBUG_ENABLED
-    PrintTrieR(&root_, 0);
+    PrintTrieR<T>(&root_, 0);
     printf("\n");
 #endif
   }
