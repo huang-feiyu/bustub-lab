@@ -8,6 +8,10 @@
 
 ## Notes
 
+* [Note01](./Notes/Note01.md): Relational Model & Relational Algebra
+
+## Homework
+
 ## Assignments
 
 * [p0](https://github.com/huang-feiyu/bustub-labs/tree/p0): C++ Primer (**100/100**)
