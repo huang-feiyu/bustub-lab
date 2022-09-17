@@ -24,6 +24,8 @@
 #include "common/logger.h"
 #include "common/rwlatch.h"
 
+// #define OWN_DEBUG
+
 namespace bustub {
 
 /**
@@ -321,7 +323,6 @@ class Trie {
       prev = ptr;
       ptr = (*prev)->GetChildNode(ch);
       if (ptr == nullptr) {
-        // weird: I cannot use std::make_unique
         ptr = (*prev)->InsertChildNode(ch, std::make_unique<TrieNode>(ch));
       }
     }
@@ -357,7 +358,9 @@ class Trie {
    * @return True if key exists and is removed, false otherwise
    */
   bool Remove(const std::string &key) {
-    LOG_DEBUG("\n== Remove: %s\n", key.c_str());
+#ifdef LOG_DEBUG_ENABLED
+    std::cout << "== Remove: " << key << std::endl;
+#endif
     if (key.empty()) {
       return false;
     }
@@ -406,7 +409,9 @@ class Trie {
    */
   template <typename T>
   T GetValue(const std::string &key, bool *success) {
-    LOG_DEBUG("\n== GetValue: %s", key.c_str());
+#ifdef LOG_DEBUG_ENABLED
+    std::cout << "== GetValue: " << key << std::endl;
+#endif
     if (key.empty()) {
       *success = false;
       return {};
@@ -461,7 +466,7 @@ class Trie {
   }
   template <typename T>
   void PrintTrie() {
-#ifdef LOG_DEBUG_ENABLED
+#ifdef OWN_DEBUG
     PrintTrieR<T>(&root_, 0);
     printf("\n");
 #endif
