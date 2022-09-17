@@ -30,7 +30,7 @@ Normal stuff. It's weird that I cannot use `std::make_unique` sometimes.
 
 <b>*</b> insert last letter failed => bug01
 
-```c
+```diff
 - (*prev)->InsertChildNode(*key.end().base(),
 -                          std::make_unique<TrieNodeWithValue<T>>(*key.end().base(), value));
 + (*prev)->InsertChildNode(*(key.end() - 1).base(),
