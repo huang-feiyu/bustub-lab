@@ -7,7 +7,7 @@
 Before starting, read the debug info in *src/include/common/logger.h*.
 
 * ERROR > WARN > INFO > DEBUG > TRACE (Refers to
-  [When to use different log levels](https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels))
+  [*When to use different log levels*](https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels))
 
 ### TrieNode Class
 
@@ -42,22 +42,22 @@ Normal stuff. It's weird that I cannot use `std::make_unique` sometimes.
 When I remove node from children, I also remove node's children.
 
 ```output
-== Init: Trie                                                                                                                           
+== Init: Trie
 [.]
 
-== Insert: (aaa,5)                                                                                                                      
-[.]                                                                                                                                     
-  [a]                                                                                                                                   
-    [a]                                                                                                                                 
-      [a](5)                                                                                                                            
-      
-== Insert: (aa,6)                                                                                                                       
-[.]                                                                                                                                     
-  [a]                                                                                                                                   
-    [a](6)                                                                                                                              
-    
-== Insert: (a,7)                                                                                                                        
-[.]                                                                                                                                     
+== Insert: (aaa,5)
+[.]
+  [a]
+    [a]
+      [a](5)
+
+== Insert: (aa,6)
+[.]
+  [a]
+    [a](6)
+
+== Insert: (a,7)
+[.]
   [a](7)
 ```
 
@@ -88,3 +88,4 @@ Score:  100/100
 Author: Huang
 Date:   2022-09-17
 ```
+
