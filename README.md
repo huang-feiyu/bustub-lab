@@ -9,6 +9,7 @@
 ## Notes
 
 * [Note01](./Notes/Note01.md): Relational Model & Relational Algebra
+* [Note02](./Notes/Note02.md): Advanced SQL
 
 ## Homework
 
