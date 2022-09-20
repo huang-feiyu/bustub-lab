@@ -80,8 +80,9 @@ Page layout
 * Data/Tuple inside the page
   * Tuple-oriented
     1. Strawman Idea: 顺序插入 (Bad for deleting)
-    2. Slotted pages: Tuple 大小可相等/不相等; Tuple id (page_id + slot/offset)
-  * Log-structed
+    2. **Slotted pages**: Tuple 大小可相等/不相等; Tuple id (page_id + slot/offset)
+  * Log-structed: DBMS only stores <u>log records</u>, just appends log records
+    to the file. (fast, 顺序写入; Bad for read)
 
 ```bash
 # slotted page
