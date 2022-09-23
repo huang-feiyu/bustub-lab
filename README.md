@@ -13,6 +13,7 @@
 * [Note03](./Notes/Note03.md): Database Storage Part I
 * [Note04](./Notes/Note04.md): Database Storage Part II
 * [Note05](./Notes/Note05.md): Buffer Pool Manager
+* [Note06](./Notes/Note06.md): Hash Tables
 
 ## Homework
 
