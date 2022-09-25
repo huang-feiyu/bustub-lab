@@ -14,6 +14,7 @@
 * [Note04](./Notes/Note04.md): Database Storage Part II
 * [Note05](./Notes/Note05.md): Buffer Pool Manager
 * [Note06](./Notes/Note06.md): Hash Tables
+* [Note07](./Notes/Note07.md): Tree Indexes Part I
 
 ## Homework
 
