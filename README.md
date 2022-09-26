@@ -15,6 +15,7 @@
 * [Note05](./Notes/Note05.md): Buffer Pool Manager
 * [Note06](./Notes/Note06.md): Hash Tables
 * [Note07](./Notes/Note07.md): Tree Indexes Part I
+* [Note08](./Notes/Note08.md): Tree Indexes Part II
 
 ## Homework
 
