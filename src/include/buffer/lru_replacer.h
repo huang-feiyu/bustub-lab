@@ -18,6 +18,7 @@
 
 #include "buffer/replacer.h"
 #include "common/config.h"
+#include "common/rwlatch.h"
 
 namespace bustub {
 
@@ -48,6 +49,8 @@ class LRUReplacer : public Replacer {
  private:
   std::list<frame_id_t> lru_list_;  // LRU Queue
   size_t num_pages_;                // max number of frames
+
+  std::mutex list_latch_;
 };
 
 }  // namespace bustub

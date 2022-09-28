@@ -25,3 +25,6 @@ Basic idea: Use a Queue in xv6 [bio.c](https://github.com/mit-pdos/xv6-riscv/blo
 In cpp, I choose to use `std::list` as the queue.
 
 Easy to implement.
+
+For concurrency control and efficiency, we should define our own data structures
+to ensure thread-safety when **necessary**.
