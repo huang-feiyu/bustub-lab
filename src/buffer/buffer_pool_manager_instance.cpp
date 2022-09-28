@@ -180,11 +180,11 @@ void BufferPoolManagerInstance::ValidatePageId(const page_id_t page_id) const {
 
 Page *BufferPoolManagerInstance::GetPage(page_id_t page_id) {
   ValidatePageId(page_id);
-  if (page_table_.find(page_id) == page_table_.end()) {
+  auto itr = page_table_.find(page_id);
+  if (itr == page_table_.end()) {
     return nullptr;
   }
-  frame_id_t frame_id = page_table_[page_id];
-  Page *page = &pages_[frame_id];
+  Page *page = &pages_[itr->second];
   return page;
 }
 
