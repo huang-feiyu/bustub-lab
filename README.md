@@ -28,3 +28,10 @@ Easy to implement.
 
 For concurrency control and efficiency, we should define our own data structures
 to ensure thread-safety when **necessary**.
+
+## BUFFER POOL MANAGER INSTANCE
+
+BufferPoolManagerInstance is responsible for **fetching** database pages from
+the DiskManager and **storing** them in memory, and can also **write dirty
+pages** out to disk when it is either explicitly instructed to do so or when it
+needs to **evict a page** to make space for a new page
