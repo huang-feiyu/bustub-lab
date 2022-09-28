@@ -20,12 +20,13 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
                                                      LogManager *log_manager)
     : BufferPoolManagerInstance(pool_size, 1, 0, disk_manager, log_manager) {}
 
-BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, uint32_t num_instances, uint32_t instance_index,
-                                                     DiskManager *disk_manager, LogManager *log_manager)
+BufferPoolManagerInstance::BufferPoolManagerInstance(
+    size_t pool_size, uint32_t num_instances, uint32_t instance_index,  // NOLINT(bugprone-easily-swappable-parameters)
+    DiskManager *disk_manager, LogManager *log_manager)
     : pool_size_(pool_size),
       num_instances_(num_instances),
       instance_index_(instance_index),
-      next_page_id_(instance_index),
+      next_page_id_(static_cast<int>(instance_index)),
       disk_manager_(disk_manager),
       log_manager_(log_manager) {
   BUSTUB_ASSERT(num_instances > 0, "If BPI is not part of a pool, then the pool size should just be 1");
@@ -85,11 +86,14 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   return false;
 }
 
-bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) { return false; }
+bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
+  // comments
+  return false;
+}
 
 page_id_t BufferPoolManagerInstance::AllocatePage() {
   const page_id_t next_page_id = next_page_id_;
-  next_page_id_ += num_instances_;
+  next_page_id_ += static_cast<int32_t>(num_instances_);
   ValidatePageId(next_page_id);
   return next_page_id;
 }
