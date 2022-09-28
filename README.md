@@ -15,7 +15,9 @@ The buffer pool is responsible for moving physical pages back and forth from
 main memory to disk. It allows a DBMS to support databases that are larger than
 the amount of memory that is available to the system.
 
-*frame*: an array of fixed-size pages. In this lab, it is 1.
+* *frame*: an array of fixed-size pages. In this lab, it is 1.
+* *BPM*: short of BufferPoolManager
+* *BPI*: short of BufferPoolManagerInstance
 
 ## LRU REPLACEMENT POLICY
 
@@ -35,3 +37,7 @@ BufferPoolManagerInstance is responsible for **fetching** database pages from
 the DiskManager and **storing** them in memory, and can also **write dirty
 pages** out to disk when it is either explicitly instructed to do so or when it
 needs to **evict a page** to make space for a new page
+
+frame_id: "page_id" in BPM, translated by page_table
+
+At first, implement non-concurrency version.
