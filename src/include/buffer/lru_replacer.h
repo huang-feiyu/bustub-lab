@@ -46,7 +46,8 @@ class LRUReplacer : public Replacer {
   size_t Size() override;
 
  private:
-  // TODO(student): implement me!
+  std::list<frame_id_t> lru_list_;  // LRU Queue
+  size_t num_pages_;                // max number of frames
 };
 
 }  // namespace bustub
