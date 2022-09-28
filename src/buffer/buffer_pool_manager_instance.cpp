@@ -21,9 +21,8 @@ BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, DiskManag
                                                      LogManager *log_manager)
     : BufferPoolManagerInstance(pool_size, 1, 0, disk_manager, log_manager) {}
 
-BufferPoolManagerInstance::BufferPoolManagerInstance(
-    size_t pool_size, uint32_t num_instances, uint32_t instance_index,  // NOLINT(bugprone-easily-swappable-parameters)
-    DiskManager *disk_manager, LogManager *log_manager)
+BufferPoolManagerInstance::BufferPoolManagerInstance(size_t pool_size, uint32_t num_instances, uint32_t instance_index,
+                                                     DiskManager *disk_manager, LogManager *log_manager)
     : pool_size_(pool_size),
       num_instances_(num_instances),
       instance_index_(instance_index),
@@ -79,26 +78,13 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
   // 2.   Pick a victim page P from either the free list or the replacer. Always pick from the free list first.
   // 3.   Update P's metadata, zero out memory and add P to the page table.
   // 4.   Set the page ID output parameter. Return a pointer to P.
-  if (free_list_.empty() && replacer_->Size() == 0) {
+  frame_id_t frame_id;
+  Page *page = GetEvictedPage(&frame_id);
+  if (page == nullptr) {
     return nullptr;
   }
 
-  frame_id_t frame_id;
   *page_id = AllocatePage();
-  if (!free_list_.empty()) {
-    // pick from free list first
-    frame_id = free_list_.front();
-    free_list_.pop_front();
-  } else {
-    // pick from replacer
-    if (!replacer_->Victim(&frame_id)) {
-      return nullptr;
-    }
-    FlushPgImp(pages_[frame_id].page_id_);
-  }
-
-  Page *page = &pages_[frame_id];
-
   page->page_id_ = *page_id;
   assert(page->pin_count_ == 0);
   page->pin_count_ = 1;
@@ -125,28 +111,11 @@ Page *BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) {
   }
 
   // Find replacement page
-  if (free_list_.empty() && replacer_->Size() == 0) {
+  frame_id_t frame_id;
+  page = GetEvictedPage(&frame_id);
+  if (page == nullptr) {
     return nullptr;
   }
-
-  frame_id_t frame_id;
-  if (!free_list_.empty()) {
-    frame_id = free_list_.front();
-    free_list_.pop_front();
-  } else {
-    if (!replacer_->Victim(&frame_id)) {
-      return nullptr;
-    }
-    FlushPgImp(pages_[frame_id].page_id_);
-  }
-
-  page = &pages_[frame_id];
-
-  // Update pgtbl
-  auto itr = page_table_.find(page->page_id_);
-  assert(itr != page_table_.end());
-  page_table_.erase(itr);
-  page_table_[page_id] = frame_id;
 
   // Update meta-data
   page->page_id_ = page_id;
@@ -154,7 +123,7 @@ Page *BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) {
   page->pin_count_ = 1;
   page->is_dirty_ = false;
   disk_manager_->ReadPage(page_id, page->data_);
-  printf("ReadPage: {%d,%d} => %s\n", page_id, frame_id, page->data_);
+  page_table_[page_id] = frame_id;
 
   return page;
 }
@@ -172,10 +141,14 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   if (page->pin_count_ > 0) {
     return false;  // someone is using the page
   }
-  FlushPgImp(page_id);
+
   page->page_id_ = INVALID_PAGE_ID;
   page->pin_count_ = 0;
-  memset(page->data_, 0, PAGE_SIZE);
+  FlushPgImp(page_id);                         // reset is_dirty_
+  memset(page->data_, 0, PAGE_SIZE);           // zero-out memory
+  free_list_.push_back(page_table_[page_id]);  // return to freelist
+  page_table_.erase(page_id);                  // remove from pgtbl
+
   DeallocatePage(page_id);
   return true;
 }
@@ -187,7 +160,7 @@ bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
     return false;
   }
   page->pin_count_--;
-  page->is_dirty_ = is_dirty;
+  page->is_dirty_ |= is_dirty;
   if (page->pin_count_ == 0) {
     replacer_->Unpin(page_table_[page_id]);
   }
@@ -212,6 +185,30 @@ Page *BufferPoolManagerInstance::GetPage(page_id_t page_id) {
   }
   frame_id_t frame_id = page_table_[page_id];
   Page *page = &pages_[frame_id];
+  return page;
+}
+
+Page *BufferPoolManagerInstance::GetEvictedPage(frame_id_t *frame_id) {
+  if (free_list_.empty() && replacer_->Size() == 0) {
+    return nullptr;
+  }
+
+  Page *page;
+  if (!free_list_.empty()) {
+    // pick from free list first
+    *frame_id = free_list_.front();
+    free_list_.pop_front();
+    page = &pages_[*frame_id];
+  } else {
+    // pick from replacer
+    if (!replacer_->Victim(frame_id)) {
+      return nullptr;
+    }
+    page = &pages_[*frame_id];
+    FlushPgImp(page->page_id_);         // flush to disk
+    page_table_.erase(page->page_id_);  // remove from pgtbl
+  }
+
   return page;
 }
 

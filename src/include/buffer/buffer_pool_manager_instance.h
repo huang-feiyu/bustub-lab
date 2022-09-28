@@ -146,6 +146,9 @@ class BufferPoolManagerInstance : public BufferPoolManager {
   std::mutex latch_;
 
  private:
+  /** Get Page via page_id */
   Page *GetPage(page_id_t page_id);
+  /** Get page from freelist or replacer. Evict a page and return its addr as new */
+  Page *GetEvictedPage(frame_id_t *frame_id);
 };
 }  // namespace bustub
