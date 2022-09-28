@@ -61,7 +61,7 @@ When I remove node from children, I also remove node's children.
   [a](7)
 ```
 
-Wierd C++ grammer:
+Weird C++ grammer:
 
 ```c++
 // case 2: non-terminal node
