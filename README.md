@@ -18,6 +18,7 @@
 * [Note08](./Notes/Note08.md): Tree Indexes Part II
 * [Note09](./Notes/Note09.md): Index Concurrency Control
 * [Note10](./Notes/Note10.md): Sorting & Aggregations
+* [Note11](./Notes/Note11.md): Join Algorithms
 
 ## Homework
 
