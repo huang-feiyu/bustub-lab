@@ -151,4 +151,29 @@ TEST(ParallelBufferPoolManagerTest, SampleTest) {
   delete disk_manager;
 }
 
+TEST(ParallelBufferPoolManagerTest, NewPageTest) {
+  const std::string db_name = "test.db";
+  const size_t buffer_pool_size = 10;
+  const size_t num_instances = 5;
+
+  auto *disk_manager = new DiskManager(db_name);
+  auto *bpm = new ParallelBufferPoolManager(num_instances, buffer_pool_size, disk_manager);
+
+  page_id_t page_id_temp;
+  for (int i = 0; i < 50; i++) {
+    EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
+    EXPECT_EQ(i % num_instances, page_id_temp % num_instances);
+  }
+  for (int i = 50; i < 100; i++) {
+    EXPECT_EQ(nullptr, bpm->NewPage(&page_id_temp));
+  }
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+  remove("test.db");
+
+  delete bpm;
+  delete disk_manager;
+}
+
 }  // namespace bustub

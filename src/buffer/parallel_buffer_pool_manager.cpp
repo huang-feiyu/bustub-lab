@@ -16,7 +16,7 @@ namespace bustub {
 
 ParallelBufferPoolManager::ParallelBufferPoolManager(size_t num_instances, size_t pool_size, DiskManager *disk_manager,
                                                      LogManager *log_manager)
-    : num_instances_(num_instances), pool_size_(pool_size), disk_manager_(disk_manager), log_manager_(log_manager) {
+    : num_instances_(num_instances), pool_size_(pool_size) {
   // Allocate and create individual BufferPoolManagerInstances
   bpis_ = new BufferPoolManagerInstance *[num_instances_];
   for (uint32_t i = 0; i < num_instances; i++) {
@@ -69,16 +69,15 @@ Page *ParallelBufferPoolManager::NewPgImp(page_id_t *page_id) {
   // 2.   Bump the starting index (mod number of instances) to start search at a different BPMI each time this function
   // is called
   std::scoped_lock lock(latch_);
-  uint32_t cnt = 0;
+
   Page *page;
   BufferPoolManager *bpi;
-  while (cnt < num_instances_) {
+  for (uint32_t i = 0; i < num_instances_; i++) {
     bpi = GetBufferPoolManager(static_cast<int>(starting_index_));
+    starting_index_ = (starting_index_ + 1) % num_instances_;
     if ((page = bpi->NewPage(page_id)) != nullptr) {
       return page;
     }
-    starting_index_++;
-    cnt++;
   }
   return nullptr;
 }

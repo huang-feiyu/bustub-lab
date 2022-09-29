@@ -93,8 +93,6 @@ class ParallelBufferPoolManager : public BufferPoolManager {
   uint32_t starting_index_ = 0;
   uint32_t num_instances_;
   uint32_t pool_size_;
-  DiskManager *disk_manager_;
-  LogManager *log_manager_;
   BufferPoolManagerInstance **bpis_;
 };
 }  // namespace bustub
