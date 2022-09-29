@@ -52,6 +52,7 @@ bool BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) {
   // Make sure you call DiskManager::WritePage!
   assert(page_id != INVALID_PAGE_ID);
 
+  std::scoped_lock lock(latch_);
   /* Get frame in buffer pool */
   Page *page = GetPage(page_id);
   if (page == nullptr) {
@@ -78,6 +79,7 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
   // 2.   Pick a victim page P from either the free list or the replacer. Always pick from the free list first.
   // 3.   Update P's metadata, zero out memory and add P to the page table.
   // 4.   Set the page ID output parameter. Return a pointer to P.
+  std::scoped_lock lock(latch_);
   frame_id_t frame_id;
   Page *page = GetEvictedPage(&frame_id);
   if (page == nullptr) {
@@ -89,7 +91,7 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
   assert(page->pin_count_ == 0);
   page->pin_count_ = 1;
   page->is_dirty_ = false;
-  memset(pages_[frame_id].data_, 0, PAGE_SIZE);
+  page->ResetMemory();
   page_table_[*page_id] = frame_id;
 
   return page;
@@ -103,6 +105,7 @@ Page *BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) {
   // 2.     If R is dirty, write it back to the disk.
   // 3.     Delete R from the page table and insert P.
   // 4.     Update P's metadata, read in the page content from disk, and then return a pointer to P.
+  std::scoped_lock lock(latch_);
   Page *page = GetPage(page_id);
   if (page != nullptr) {
     page->pin_count_++;
@@ -134,6 +137,7 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   // 1.   If P does not exist, return true.
   // 2.   If P exists, but has a non-zero pin-count, return false. Someone is using the page.
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
+  std::scoped_lock lock(latch_);
   Page *page = GetPage(page_id);
   if (page == nullptr) {
     return true;
@@ -142,10 +146,15 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
     return false;  // someone is using the page
   }
 
+  assert(page_id == page->page_id_);
+  if (page->is_dirty_) {
+    disk_manager_->WritePage(page_id, page->data_);
+    page->is_dirty_ = false;
+  }
+
   page->page_id_ = INVALID_PAGE_ID;
   page->pin_count_ = 0;
-  FlushPgImp(page_id);                         // reset is_dirty_
-  memset(page->data_, 0, PAGE_SIZE);           // zero-out memory
+  page->ResetMemory();                         // zero-out memory
   free_list_.push_back(page_table_[page_id]);  // return to freelist
   page_table_.erase(page_id);                  // remove from pgtbl
 
@@ -154,6 +163,7 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
 }
 
 bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
+  std::scoped_lock lock(latch_);
   Page *page = GetPage(page_id);
   assert(page != nullptr);
   if (page->pin_count_ <= 0) {
@@ -205,7 +215,10 @@ Page *BufferPoolManagerInstance::GetEvictedPage(frame_id_t *frame_id) {
       return nullptr;
     }
     page = &pages_[*frame_id];
-    FlushPgImp(page->page_id_);         // flush to disk
+    if (page->is_dirty_) {
+      disk_manager_->WritePage(page->page_id_, page->data_);
+      page->is_dirty_ = false;
+    }
     page_table_.erase(page->page_id_);  // remove from pgtbl
   }
 
