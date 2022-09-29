@@ -68,8 +68,13 @@ bool BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) {
 }
 
 void BufferPoolManagerInstance::FlushAllPgsImp() {
-  for (auto p2f : page_table_) {
-    assert(FlushPgImp(p2f.first));
+  std::scoped_lock lock(latch_);
+  for (size_t i = 0; i < pool_size_; i++) {
+    Page *page = pages_ + i;
+    if ((page->page_id_ != INVALID_PAGE_ID) && (page->is_dirty_)) {
+      disk_manager_->WritePage(page->page_id_, page->data_);
+      page->is_dirty_ = false;
+    }
   }
 }
 
@@ -155,6 +160,7 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   page->page_id_ = INVALID_PAGE_ID;
   page->pin_count_ = 0;
   page->ResetMemory();                         // zero-out memory
+  replacer_->Pin(page_table_[page_id]);        // remove from replacer
   free_list_.push_back(page_table_[page_id]);  // return to freelist
   page_table_.erase(page_id);                  // remove from pgtbl
 
