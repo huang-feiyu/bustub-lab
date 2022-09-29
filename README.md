@@ -19,7 +19,7 @@ the amount of memory that is available to the system.
 * *BPM*: short of BufferPoolManager
 * *BPI*: short of BufferPoolManagerInstance
 
-## LRU REPLACEMENT POLICY
+## LRU Replacement Policy
 
 Replacer is responsible for tracking page usage in the buffer pool.
 
@@ -31,7 +31,7 @@ Easy to implement.
 For concurrency control and efficiency, we should define our own data structures
 to ensure thread-safety when **necessary**.
 
-## BUFFER POOL MANAGER INSTANCE
+## Buffer Pool Manager Instance
 
 BufferPoolManagerInstance is responsible for **fetching** database pages from
 the DiskManager and **storing** them in memory, and can also **write dirty
@@ -44,3 +44,7 @@ At first, implement non-concurrency version. Then fix time out issue.
 The assignment has indicated that it is too slow might because of lru replacer.
 
 After fixing time issue, add a big lock to BPI. => Fix dead lock issue.
+
+## Parallel Buffer Pool Manager
+
+Just use some instances individually, easy to implement.
