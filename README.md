@@ -40,4 +40,7 @@ needs to **evict a page** to make space for a new page
 
 frame_id: "page_id" in BPM, translated by page_table
 
-At first, implement non-concurrency version.
+At first, implement non-concurrency version. Then fix time out issue.
+The assignment has indicated that it is too slow might because of lru replacer.
+
+After fixing time issue, add a big lock to BPI.
