@@ -89,6 +89,7 @@ class ParallelBufferPoolManager : public BufferPoolManager {
   void FlushAllPgsImp() override;
 
  private:
+  std::mutex latch_;
   uint32_t starting_index_ = 0;
   uint32_t num_instances_;
   uint32_t pool_size_;

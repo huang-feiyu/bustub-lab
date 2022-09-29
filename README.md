@@ -48,3 +48,15 @@ After fixing time issue, add a big lock to BPI. => Fix dead lock issue.
 ## Parallel Buffer Pool Manager
 
 Just use some instances individually, easy to implement.
+
+In gradescope, only RoundRobinNewPage failed. <s>But I think it's ok.</s>
+Add a global lock to `NewPage`.
+
+---
+
+```
+Time:   9 Hours
+Score:  96/100
+Author: Huang
+Date:   2022-09-29
+```
