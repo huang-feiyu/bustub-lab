@@ -22,6 +22,7 @@
 ## Homework
 
 * [HW1](./Homework/hw1): SQL
+* [HW2](./Homework/hw2.pdf): Indexes (**82/100**)
 
 ## Assignments
 
