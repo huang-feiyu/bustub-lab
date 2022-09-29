@@ -52,6 +52,9 @@ Just use some instances individually, easy to implement.
 In gradescope, only RoundRobinNewPage failed. <s>But I think it's ok.</s>
 Add a global lock to `NewPage`.
 
+-- I failed to find the bug. I still think my code is okay after checking many
+times.
+
 ---
 
 ```
