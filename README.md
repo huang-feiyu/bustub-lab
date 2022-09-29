@@ -26,4 +26,5 @@
 ## Assignments
 
 * [p0](https://github.com/huang-feiyu/bustub-labs/tree/p0): C++ Primer (**100/100**)
+* [p1](https://github.com/huang-feiyu/bustub-labs/tree/p1): Buffer Pool Manager (**96/100**)
 
