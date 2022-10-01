@@ -10,15 +10,16 @@
 
 * [Note01](./Notes/Note01.md): Relational Model & Relational Algebra
 * [Note02](./Notes/Note02.md): Advanced SQL
-* [Note03](./Notes/Note03.md): Database Storage Part I
-* [Note04](./Notes/Note04.md): Database Storage Part II
+* [Note03](./Notes/Note03.md): Database Storage - Part I
+* [Note04](./Notes/Note04.md): Database Storage - Part II
 * [Note05](./Notes/Note05.md): Buffer Pool Manager
 * [Note06](./Notes/Note06.md): Hash Tables
-* [Note07](./Notes/Note07.md): Tree Indexes Part I
-* [Note08](./Notes/Note08.md): Tree Indexes Part II
+* [Note07](./Notes/Note07.md): Tree Indexes - Part I
+* [Note08](./Notes/Note08.md): Tree Indexes - Part II
 * [Note09](./Notes/Note09.md): Index Concurrency Control
 * [Note10](./Notes/Note10.md): Sorting & Aggregations
 * [Note11](./Notes/Note11.md): Join Algorithms
+* [Note12](./Notes/Note12.md): Query Execution - Part I
 
 ## Homework
 
