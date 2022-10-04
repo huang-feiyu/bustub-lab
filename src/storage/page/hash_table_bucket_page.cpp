@@ -72,6 +72,7 @@ KeyType HASH_TABLE_BUCKET_TYPE::KeyAt(uint32_t bucket_idx) const {
   if (!IsReadable(bucket_idx)) {
     return {};
   }
+  assert(IsOccupied(bucket_idx));
   return array_[bucket_idx].first;
 }
 
@@ -150,6 +151,7 @@ bool HASH_TABLE_BUCKET_TYPE::IsEmpty() {
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 uint32_t HASH_TABLE_BUCKET_TYPE::GetFreeId() {
+  // NOTE: IsReadable or IsOccupied?
   for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
     if (!IsReadable(i)) {
       return i;

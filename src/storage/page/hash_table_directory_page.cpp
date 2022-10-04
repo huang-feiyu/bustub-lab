@@ -61,13 +61,18 @@ void HashTableDirectoryPage::SetBucketPageId(uint32_t bucket_idx, page_id_t buck
 }
 
 uint32_t HashTableDirectoryPage::Size() {
-  // TODO: What size? Weird description.
+  // NOTE: What size? Weird description.
   return -1;  // do not use this
 }
 
 bool HashTableDirectoryPage::CanShrink() {
-  // TODO:
-  return false;
+  // only if every local depth is less than global depth
+  for (uint32_t i = 0; i < DIRECTORY_ARRAY_SIZE; i++) {
+    if (GetLocalDepth(i) >= GetGlobalDepth()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 uint32_t HashTableDirectoryPage::GetLocalDepth(uint32_t bucket_idx) { return local_depths_[bucket_idx]; }
