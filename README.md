@@ -39,3 +39,19 @@ aka. Concurrency Control. (Much easier than B<sup>+</sup>Tree)
     is readable.
   * Do **not** place a member right after the `array_`, it will change the elem
     of the `array_`
+
+There are some helper functions that I do not understand.
+
+## Task#2: Hash Table Implementation
+
+* bucket splitting: Split a bucket if there is no room for insertion,
+  i.e. insert to a full bucket.
+* bucket merging: Merging must be attempted when a bucket becomes empty.
+  * Only empty buckets can be merged.
+  * Buckets can only be merged with their split image if their split image has
+    the same local depth.
+  * Buckets can only be merged if their local depth is greater than 0.
+* directory growing: When bucket is full and cannot split it, then grow the
+  directory.
+* directory shrinking: Only shrink the directory if the local depth of every
+  bucket is strictly less than the global depth of the directory.
