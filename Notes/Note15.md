@@ -1,4 +1,4 @@
-# Query Execution - Part II
+# Query Optimization - Part II
 
 [TOC]
 
