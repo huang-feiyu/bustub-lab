@@ -23,6 +23,8 @@ aka. Concurrency Control. (Much easier than B<sup>+</sup>Tree)
 
 ## Task#1: Page Layout
 
+`bucket_id` is the hash value of a specific key.
+
 * Directory Page
   * `GetSplitImageIndex`: Get the "split image"(brother bucket) bucket id =>
     Just NOT the highest bit of its bucket
@@ -30,3 +32,8 @@ aka. Concurrency Control. (Much easier than B<sup>+</sup>Tree)
   * `IncrGlobalDepth`: Because we use LSB to index bucket, so when we double
     the directory(inc global depth), we need to map our new bucket to its
     brother. Specifically, just need to copy bucket page id and local depth.
+* Bucket Page
+  * `readable_` & `occupied_`: We do not want to remove slot immediately. So
+    when remove one slot, do not remove it but clear `readable_` flag.<br/>
+    Each bit of the 2 members tells us whether the slot(with specific bucket id)
+    is readable.

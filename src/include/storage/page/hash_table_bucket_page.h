@@ -118,6 +118,12 @@ class HashTableBucketPage {
   void SetReadable(uint32_t bucket_idx);
 
   /**
+   * ClrReadable - Clear readable_ bitmap at bucket_idx
+   * @param bucket_idx the index to update
+   */
+  void ClrReadable(uint32_t bucket_idx);
+
+  /**
    * @return the number of readable elements, i.e. current size
    */
   uint32_t NumReadable();
@@ -133,16 +139,23 @@ class HashTableBucketPage {
   bool IsEmpty();
 
   /**
+   * @return the lowest bucket id we can use
+   */
+  uint32_t GetFreeId();
+
+  /**
    * Prints the bucket's occupancy information
    */
   void PrintBucket();
 
  private:
   //  For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
-  char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
+  char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];  // 1 if once occupied
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   MappingType array_[0];
+
+  uint32_t size_ = 0;
 };
 
 }  // namespace bustub
