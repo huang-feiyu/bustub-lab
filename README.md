@@ -20,3 +20,13 @@ There is two main types of page we need to handle:
 The rest job is to follow extendible hash table scheme to implement
 `Insert`, `Remove`, `GetValue`. And we also need to support multi-threading,
 aka. Concurrency Control. (Much easier than B<sup>+</sup>Tree)
+
+## Task#1: Page Layout
+
+* Directory Page
+  * `GetSplitImageIndex`: Get the "split image"(brother bucket) bucket id =>
+    Just NOT the highest bit of its bucket
+  * `GetLocalHighBit`: Only for function above
+  * `IncrGlobalDepth`: Because we use LSB to index bucket, so when we double
+    the directory(inc global depth), we need to map our new bucket to its
+    brother. Specifically, just need to copy bucket page id and local depth.
