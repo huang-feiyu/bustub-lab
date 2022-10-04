@@ -149,13 +149,12 @@ class HashTableBucketPage {
   void PrintBucket();
 
  private:
+  uint32_t size_ = 0;
   //  For more on BUCKET_ARRAY_SIZE see storage/page/hash_table_page_defs.h
   char occupied_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];  // 1 if once occupied
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   MappingType array_[0];
-
-  uint32_t size_ = 0;
 };
 
 }  // namespace bustub

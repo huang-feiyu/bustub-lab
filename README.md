@@ -37,3 +37,5 @@ aka. Concurrency Control. (Much easier than B<sup>+</sup>Tree)
     when remove one slot, do not remove it but clear `readable_` flag.<br/>
     Each bit of the 2 members tells us whether the slot(with specific bucket id)
     is readable.
+  * Do **not** place a member right after the `array_`, it will change the elem
+    of the `array_`
