@@ -24,7 +24,7 @@ bool HASH_TABLE_BUCKET_TYPE::GetValue(KeyType key, KeyComparator cmp, std::vecto
   bool flag = false;
   for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
     auto k2v = array_[i];
-    if (cmp(key, k2v.first) == 0) {
+    if (IsReadable(i) && cmp(key, k2v.first) == 0) {
       result->push_back(k2v.second);
       flag = true;
     }
@@ -37,10 +37,9 @@ bool HASH_TABLE_BUCKET_TYPE::Insert(KeyType key, ValueType value, KeyComparator 
   if (IsFull()) {
     return false;
   }
-  std::vector<ValueType> *values;
-  if (GetValue(key, cmp, values)) {
-    if (std::find(values->begin(), values->end(), value) == values->end()) {
-      // there is a same KV pair
+  for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
+    auto k2v = array_[i];
+    if (IsReadable(i) && cmp(key, k2v.first) == 0 && k2v.second == value) {
       return false;
     }
   }
@@ -58,8 +57,8 @@ template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_BUCKET_TYPE::Remove(KeyType key, ValueType value, KeyComparator cmp) {
   for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
     auto k2v = array_[i];
-    if (readable_[i] && cmp(key, k2v.first) == 0 && k2v.second == value) {
-      assert(occupied_[i]);
+    if (IsReadable(i) && cmp(key, k2v.first) == 0 && k2v.second == value) {
+      assert(IsOccupied(i));
       ClrReadable(i);
       size_--;
       return true;
@@ -125,7 +124,9 @@ void HASH_TABLE_BUCKET_TYPE::SetReadable(uint32_t bucket_idx) {
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 void HASH_TABLE_BUCKET_TYPE::ClrReadable(uint32_t bucket_idx) {
-  if (!IsReadable(bucket_idx)) return;
+  if (!IsReadable(bucket_idx)) {
+    return;
+  }
 
   uint8_t bkt_read = static_cast<uint8_t>(readable_[bucket_idx / 8]);
   bkt_read ^= 1 << (bucket_idx % 8);
