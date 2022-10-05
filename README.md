@@ -20,7 +20,7 @@
 * [Note10](./Notes/Note10.md): Sorting & Aggregations
 * [Note11](./Notes/Note11.md): Join Algorithms
 * [Note12](./Notes/Note12.md): Query Execution - Part I
-* [Note13](./Notes/Note13.md): Query Execution - Part II (TODO:)
+* [Note13](./Notes/Note13.md): Query Execution - Part II
 * [Note14](./Notes/Note14.md): Query Optimization - Part I (TODO:)
 * [Note15](./Notes/Note15.md): Query Optimization - Part II
 
