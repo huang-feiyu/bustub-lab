@@ -28,6 +28,7 @@
 
 * [HW1](./Homework/hw1): SQL
 * [HW2](./Homework/hw2.pdf): Indexes (**82/100**)
+* [HW3](./Homework/hw3.pdf): Join Algorithms (**100/100**)
 
 ## Assignments
 
