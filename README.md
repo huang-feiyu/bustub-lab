@@ -63,6 +63,12 @@ Insert: Check whether the bucket is full: if not, just insert it.
 Otherwise, follow the steps below:
 1. Check if hash table has to **grow directory**: if is, increment global depth
    and copy bucket page id; otherwise, do nothing
-2. Split the bucket to be inserted: get the split image bucket page and
-   re-organize the existing k/v pairs; after split, increment local depth
+2. Split the bucket to be inserted: before splitting, increment local depth;
+   get the split image bucket page and re-organize the existing k/v pairs
 3. Insert the k/v until success
+
+Remove: Remove k/v, check whether the bucket is empty: if is, return.
+Otherwise, follow the steps below:
+1. Delete the empty page: bkt_id points to its image
+2. Decrement local depth
+3. Merge until image page is not null

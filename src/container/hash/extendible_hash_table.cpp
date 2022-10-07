@@ -139,33 +139,34 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   assert(bkt_page->IsFull());
 
   // Check if hash table has to grow directory?
-  auto img_bkt_id = dir_page->GetSplitImageIndex(KeyToDirectoryIndex(key, dir_page));
-  auto img_page_id = dir_page->GetBucketPageId(img_bkt_id);
+  auto bkt_id = KeyToDirectoryIndex(key, dir_page);
+  auto img_id = dir_page->GetSplitImageIndex(bkt_id);
+  auto img_page_id = dir_page->GetBucketPageId(img_id);
   if (img_page_id != bkt_page_id) {
     // split after a while, we need to "make" its img bkt and then split it
     dir_page->IncrGlobalDepth();
   }
 
-  img_bkt_id = dir_page->GetSplitImageIndex(KeyToDirectoryIndex(key, dir_page));
-  img_page_id = dir_page->GetBucketPageId(img_bkt_id);
+  // split the bucket: increment local depth
+  dir_page->IncrLocalDepth(bkt_id);
+  dir_page->IncrLocalDepth(img_id);
+
+  img_id = dir_page->GetSplitImageIndex(KeyToDirectoryIndex(key, dir_page));
+  img_page_id = dir_page->GetBucketPageId(img_id);
   assert(img_page_id == bkt_page_id);
 
   // split the bucket: re-organize everything
   auto img_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(buffer_pool_manager_->NewPage(&img_page_id)->GetData());
+  dir_page->SetBucketPageId(img_id, img_page_id);
   auto size = bkt_page->NumReadable();
   for (uint32_t i = 0; i < size; i++) {
     auto k_tmp = bkt_page->KeyAt(i);
     auto v_tmp = bkt_page->ValueAt(i);
-    if (KeyToDirectoryIndex(key, dir_page) == img_bkt_id) {
+    if (KeyToDirectoryIndex(key, dir_page) == img_id) {
       img_page->Insert(k_tmp, v_tmp, comparator_);
       bkt_page->RemoveAt(i);
     }
   }
-
-  // split the bucket: increment local depth
-  auto old_ld = dir_page->GetLocalDepth(bkt_page_id);
-  dir_page->SetLocalDepth(bkt_page_id, old_ld + 1);
-  dir_page->SetLocalDepth(img_page_id, old_ld + 1);
 
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true));
   assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
@@ -207,7 +208,41 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const ValueType &value) {
-  // TODO(Huang):
+  table_latch_.WLock();
+
+  auto dir_page = FetchDirectoryPage();
+  auto bkt_page_id = static_cast<int>(KeyToPageId(key, dir_page));
+  auto bkt_page = FetchBucketPage(bkt_page_id);
+
+  auto bkt_id = KeyToDirectoryIndex(key, dir_page);
+  auto img_id = dir_page->GetSplitImageIndex(bkt_id);
+  if (bkt_page->IsEmpty() ||                                                 // premise 1
+      dir_page->GetLocalDepth(bkt_id) == 0 ||                                // premise 2
+      dir_page->GetLocalDepth(bkt_id) != dir_page->GetLocalDepth(img_id)) {  // premise 3
+    return;
+  }
+
+  // Delete the empty page
+  auto img_page_id = dir_page->GetBucketPageId(img_id);
+  auto img_page = FetchBucketPage(img_page_id);
+  assert(buffer_pool_manager_->UnpinPage(bkt_page_id, false));
+  dir_page->SetBucketPageId(bkt_id, img_page_id);
+
+  // Decrement local depth
+  dir_page->DecrLocalDepth(bkt_id);
+  dir_page->DecrLocalDepth(img_id);
+
+  if (dir_page->CanShrink()) {
+    dir_page->DecrGlobalDepth();
+  }
+
+  assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true));
+  assert(buffer_pool_manager_->UnpinPage(img_page_id, false));
+  table_latch_.WUnlock();
+
+  if (img_page->IsEmpty()) {
+    Merge(transaction, key, value);
+  }
 }
 
 /*****************************************************************************
