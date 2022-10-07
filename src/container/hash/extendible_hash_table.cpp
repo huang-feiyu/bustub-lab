@@ -35,8 +35,8 @@ HASH_TABLE_TYPE::ExtendibleHashTable(const std::string &name, BufferPoolManager 
   dir_page->SetBucketPageId(0, bucket_page_id);
   dir_page->SetLocalDepth(0, 0);
 
-  buffer_pool_manager->UnpinPage(directory_page_id_, true);
-  buffer_pool_manager->UnpinPage(bucket_page_id, false);
+  assert(buffer_pool_manager->UnpinPage(directory_page_id_, true));
+  assert(buffer_pool_manager->UnpinPage(bucket_page_id, false));
 }
 
 /*****************************************************************************
@@ -47,7 +47,7 @@ HASH_TABLE_TYPE::ExtendibleHashTable(const std::string &name, BufferPoolManager 
  * for extendible hashing.
  *
  * @param key the key to hash
- * @return the downcasted 32-bit hash
+ * @return the downcast-ed 32-bit hash
  */
 template <typename KeyType, typename ValueType, typename KeyComparator>
 uint32_t HASH_TABLE_TYPE::Hash(KeyType key) {
@@ -88,7 +88,17 @@ HASH_TABLE_BUCKET_TYPE *HASH_TABLE_TYPE::FetchBucketPage(page_id_t bucket_page_i
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std::vector<ValueType> *result) {
-  return false;
+  table_latch_.WLock();
+
+  auto dir_page = FetchDirectoryPage();
+  auto bkt_page_id = KeyToPageId(key, dir_page);
+  auto bkt_page = FetchBucketPage(bkt_page_id);
+  auto success = bkt_page->GetValue(key, comparator_, result);
+
+  assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+  assert(buffer_pool_manager_->UnpinPage(bkt_page_id, false));
+  table_latch_.WUnlock();
+  return success;
 }
 
 /*****************************************************************************
@@ -96,11 +106,32 @@ bool HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_TYPE::Insert(Transaction *transaction, const KeyType &key, const ValueType &value) {
-  return false;
+  table_latch_.WLock();
+
+  auto dir_page = FetchDirectoryPage();
+  auto bkt_page_id = KeyToPageId(key, dir_page);
+  auto bkt_page = FetchBucketPage(bkt_page_id);
+
+  // case 1: bucket splitting, and potentially directory growing
+  if (bkt_page->IsFull()) {
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+    assert(buffer_pool_manager_->UnpinPage(bkt_page_id, false));
+    table_latch_.WUnlock();
+    return SplitInsert(transaction, key, value);  // leave everything to SplitInsert
+  }
+
+  // case 2: no bucket splitting
+  auto success = bkt_page->Insert(key, value, comparator_);
+
+  assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+  assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
+  table_latch_.WUnlock();
+  return success;
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, const ValueType &value) {
+  // TODO(Huang):
   return false;
 }
 
@@ -109,14 +140,36 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const ValueType &value) {
-  return false;
+  table_latch_.WLock();
+
+  auto dir_page = FetchDirectoryPage();
+  auto bkt_page_id = KeyToPageId(key, dir_page);
+  auto bkt_page = FetchBucketPage(bkt_page_id);
+  auto success = bkt_page->Remove(key, value, comparator_);
+
+  // case 1: Merging must be attempted when a bucket becomes empty
+  if (success && bkt_page->IsEmpty()) {
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+    assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
+    table_latch_.WUnlock();
+    Merge(transaction, key, value);  // leave everything to Merge
+    return success;
+  }
+
+  // case 2: no bucket merging
+  assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+  assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
+  table_latch_.WUnlock();
+  return success;
 }
 
 /*****************************************************************************
  * MERGE
  *****************************************************************************/
 template <typename KeyType, typename ValueType, typename KeyComparator>
-void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const ValueType &value) {}
+void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const ValueType &value) {
+  // TODO(Huang):
+}
 
 /*****************************************************************************
  * GETGLOBALDEPTH - DO NOT TOUCH

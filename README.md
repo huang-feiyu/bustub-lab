@@ -55,3 +55,6 @@ There are some helper functions that I do not understand.
   directory.
 * directory shrinking: Only shrink the directory if the local depth of every
   bucket is strictly less than the global depth of the directory.
+
+For concurrency control now, I just use a big Writer Latch to make everything
+consequential.
