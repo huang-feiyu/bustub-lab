@@ -44,6 +44,9 @@ There are some helper functions that I do not understand.
 
 ## Task#2: Hash Table Implementation
 
+> For concurrency control now, I just use a big Writer Latch to make everything
+> consequential.
+
 * bucket splitting: Split a bucket if there is no room for insertion,
   i.e. insert to a full bucket.
 * bucket merging: Merging must be attempted when a bucket becomes empty.
@@ -56,5 +59,10 @@ There are some helper functions that I do not understand.
 * directory shrinking: Only shrink the directory if the local depth of every
   bucket is strictly less than the global depth of the directory.
 
-For concurrency control now, I just use a big Writer Latch to make everything
-consequential.
+Insert: Check whether the bucket is full: if not, just insert it.
+Otherwise, follow the steps below:
+1. Check if hash table has to **grow directory**: if is, increment global depth
+   and copy bucket page id; otherwise, do nothing
+2. Split the bucket to be inserted: get the split image bucket page and
+   re-organize the existing k/v pairs; after split, increment local depth
+3. Insert the k/v until success

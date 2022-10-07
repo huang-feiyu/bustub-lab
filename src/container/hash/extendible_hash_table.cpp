@@ -131,8 +131,47 @@ bool HASH_TABLE_TYPE::Insert(Transaction *transaction, const KeyType &key, const
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
 bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, const ValueType &value) {
-  // TODO(Huang):
-  return false;
+  table_latch_.WLock();
+
+  auto dir_page = FetchDirectoryPage();
+  auto bkt_page_id = static_cast<int>(KeyToPageId(key, dir_page));
+  auto bkt_page = FetchBucketPage(bkt_page_id);
+  assert(bkt_page->IsFull());
+
+  // Check if hash table has to grow directory?
+  auto img_bkt_id = dir_page->GetSplitImageIndex(KeyToDirectoryIndex(key, dir_page));
+  auto img_page_id = dir_page->GetBucketPageId(img_bkt_id);
+  if (img_page_id != bkt_page_id) {
+    // split after a while, we need to "make" its img bkt and then split it
+    dir_page->IncrGlobalDepth();
+  }
+
+  img_bkt_id = dir_page->GetSplitImageIndex(KeyToDirectoryIndex(key, dir_page));
+  img_page_id = dir_page->GetBucketPageId(img_bkt_id);
+  assert(img_page_id == bkt_page_id);
+
+  // split the bucket: re-organize everything
+  auto img_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(buffer_pool_manager_->NewPage(&img_page_id)->GetData());
+  auto size = bkt_page->NumReadable();
+  for (uint32_t i = 0; i < size; i++) {
+    auto k_tmp = bkt_page->KeyAt(i);
+    auto v_tmp = bkt_page->ValueAt(i);
+    if (KeyToDirectoryIndex(key, dir_page) == img_bkt_id) {
+      img_page->Insert(k_tmp, v_tmp, comparator_);
+      bkt_page->RemoveAt(i);
+    }
+  }
+
+  // split the bucket: increment local depth
+  auto old_ld = dir_page->GetLocalDepth(bkt_page_id);
+  dir_page->SetLocalDepth(bkt_page_id, old_ld + 1);
+  dir_page->SetLocalDepth(img_page_id, old_ld + 1);
+
+  assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true));
+  assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
+  assert(buffer_pool_manager_->UnpinPage(img_page_id, true));
+  table_latch_.WUnlock();
+  return Insert(transaction, key, value);
 }
 
 /*****************************************************************************
