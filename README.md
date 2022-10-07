@@ -88,6 +88,21 @@ Otherwise, follow the steps below:
 
 * Delete no-unique key failed => bug01
 
+Sample test wrong...
+
 ```diff
-TODO:
+  // delete some values
+  for (int i = 0; i < 5; i++) {
+    EXPECT_TRUE(ht.Remove(nullptr, i, i));
+-   std::vector<int> res;
++   res.clear();
+    ht.GetValue(nullptr, i, &res);
+    if (i == 0) {
+      // (0, 0) is the only pair with key 0
+      EXPECT_EQ(0, res.size());
+    } else {
+      EXPECT_EQ(1, res.size());
+      EXPECT_EQ(2 * i, res[0]);
+    }
+  }
 ```
