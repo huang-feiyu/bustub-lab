@@ -216,9 +216,10 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
 
   auto bkt_id = KeyToDirectoryIndex(key, dir_page);
   auto img_id = dir_page->GetSplitImageIndex(bkt_id);
-  if (bkt_page->IsEmpty() ||                                                 // premise 1
+  if (!bkt_page->IsEmpty() ||                                                // premise 1
       dir_page->GetLocalDepth(bkt_id) == 0 ||                                // premise 2
       dir_page->GetLocalDepth(bkt_id) != dir_page->GetLocalDepth(img_id)) {  // premise 3
+    table_latch_.WUnlock();
     return;
   }
 

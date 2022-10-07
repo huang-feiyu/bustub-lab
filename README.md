@@ -75,6 +75,17 @@ Otherwise, follow the steps below:
 
 ### Debug
 
+* Infinite test => bug00
+
+```diff
+  if (!bkt_page->IsEmpty() ||                                                // premise 1
+      dir_page->GetLocalDepth(bkt_id) == 0 ||                                // premise 2
+      dir_page->GetLocalDepth(bkt_id) != dir_page->GetLocalDepth(img_id)) {  // premise 3
++   table_latch_.WUnlock();
+    return;
+  }
+```
+
 * Delete no-unique key failed => bug01
 
 ```diff
