@@ -72,3 +72,11 @@ Otherwise, follow the steps below:
 1. Delete the empty page: bkt_id points to its image
 2. Decrement local depth
 3. Merge until image page is not null
+
+### Debug
+
+* Delete no-unique key failed => bug01
+
+```diff
+TODO:
+```
