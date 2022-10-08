@@ -154,6 +154,7 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   auto img_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(buffer_pool_manager_->NewPage(&img_page_id)->GetData());
   assert(img_page_id != bkt_page_id);
   dir_page->SetBucketPageId(img_id, img_page_id);  // add to dir_page
+  dir_page->SetLocalDepth(img_id, dir_page->GetLocalDepth(bkt_id));
   assert(dir_page->GetLocalDepth(bkt_id) == dir_page->GetLocalDepth(img_id));
 
   // Rehash all existing k/v pairs

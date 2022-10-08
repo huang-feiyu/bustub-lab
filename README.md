@@ -123,3 +123,11 @@ Sample test wrong...
     dir_page->SetLocalDepth(i, local_depth);
   }
  ``` 
+
+* SplitInsert assertion failed => bug03
+
+```diff
+  dir_page->SetBucketPageId(img_id, img_page_id);  // add to dir_page
++ dir_page->SetLocalDepth(img_id, dir_page->GetLocalDepth(bkt_id));
+  assert(dir_page->GetLocalDepth(bkt_id) == dir_page->GetLocalDepth(img_id));
+```

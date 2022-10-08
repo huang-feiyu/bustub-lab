@@ -127,7 +127,6 @@ TEST(HashTableTest, LargeTest) {
 
   // insert a lot of values
   for (int i = 0; i < MAGIC; i++) {
-    printf("i = %d\n", i);
     ht.Insert(nullptr, i, i);
     std::vector<int> res;
     ht.GetValue(nullptr, i, &res);
