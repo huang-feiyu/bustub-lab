@@ -137,7 +137,13 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   auto bkt_id = KeyToDirectoryIndex(key, dir_page);
   auto bkt_page_id = static_cast<int>(KeyToPageId(key, dir_page));
   auto bkt_page = FetchBucketPage(bkt_page_id);
-  assert(bkt_page->IsFull());  // NOTE: Might wrong, concurrency issue
+  if (!bkt_page->IsFull()) {
+    // For concurrency issue
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+    assert(buffer_pool_manager_->UnpinPage(bkt_page_id, false));
+    table_latch_.WUnlock();
+    return Insert(transaction, key, value);
+  }
 
   // Increment local depth
   dir_page->IncrLocalDepth(bkt_id);
