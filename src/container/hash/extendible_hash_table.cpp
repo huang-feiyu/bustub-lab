@@ -221,7 +221,7 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   table_latch_.WUnlock();
 
   // case 1: Merging must be attempted when a bucket becomes empty
-  if (success && bkt_page->IsEmpty()) {
+  if (bkt_page->IsEmpty()) {
     Merge(transaction, key, value);  // leave everything to Merge
   }
 

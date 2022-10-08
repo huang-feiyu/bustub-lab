@@ -143,3 +143,9 @@ Sample test wrong...
 +   return Insert(transaction, key, value);
 + }
 ```
+
+* GradeScope GrowShrinkTest GD assertion failed => bug05
+
+[Test files](https://github.com/smilingpoplar/cmu-15445/tree/main/test)
+
+It's weird: local GrowShrinkTest is OK, but failed in GradeScope.
