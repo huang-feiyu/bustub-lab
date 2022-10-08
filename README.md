@@ -113,3 +113,13 @@ Sample test wrong...
     }
   }
 ```
+
+* SplitInsert segmentation fault => bug02
+
+```diff
+- for (uint32_t i = bkt_id; i >= diff; i -= diff) {
++ for (uint32_t i = bkt_id - diff; i >= diff; i -= diff) {
+    dir_page->SetBucketPageId(i, bkt_page_id);
+    dir_page->SetLocalDepth(i, local_depth);
+  }
+ ``` 

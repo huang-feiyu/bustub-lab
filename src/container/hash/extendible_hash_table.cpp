@@ -173,19 +173,19 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   // Re-organize previous buckets
   uint32_t local_depth = dir_page->GetLocalDepth(img_id);
   uint32_t diff = 1 << local_depth;
-  for (uint32_t i = bkt_id - diff; i >= diff; i -= diff) {
+  for (uint32_t i = bkt_id; i >= diff; i -= diff) {
     dir_page->SetBucketPageId(i, bkt_page_id);
     dir_page->SetLocalDepth(i, local_depth);
   }
-  for (uint32_t i = bkt_id + diff; i < dir_page->Size(); i += diff) {
+  for (uint32_t i = bkt_id; i < dir_page->Size(); i += diff) {
     dir_page->SetBucketPageId(i, bkt_page_id);
     dir_page->SetLocalDepth(i, local_depth);
   }
-  for (uint32_t i = img_id - diff; i >= diff; i -= diff) {
+  for (uint32_t i = img_id; i >= diff; i -= diff) {
     dir_page->SetBucketPageId(i, img_page_id);
     dir_page->SetLocalDepth(i, local_depth);
   }
-  for (uint32_t i = img_id + diff; i < dir_page->Size(); i += diff) {
+  for (uint32_t i = img_id; i < dir_page->Size(); i += diff) {
     dir_page->SetBucketPageId(i, img_page_id);
     dir_page->SetLocalDepth(i, local_depth);
   }
