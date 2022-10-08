@@ -25,7 +25,8 @@ lsn_t HashTableDirectoryPage::GetLSN() const { return lsn_; }
 void HashTableDirectoryPage::SetLSN(lsn_t lsn) { lsn_ = lsn; }
 
 uint32_t HashTableDirectoryPage::GetSplitImageIndex(uint32_t bucket_idx) {
-  uint32_t high_bit = GetLocalHighBit(bucket_idx);
+  uint32_t depth = GetLocalDepth(bucket_idx);
+  uint32_t high_bit = 1 << (depth - 1);
   return bucket_idx ^ high_bit;
 }
 
@@ -84,7 +85,7 @@ void HashTableDirectoryPage::DecrLocalDepth(uint32_t bucket_idx) { local_depths_
 
 uint32_t HashTableDirectoryPage::GetLocalHighBit(uint32_t bucket_idx) {
   uint32_t depth = GetLocalDepth(bucket_idx);
-  return 1 << (depth - 1);
+  return 1 << depth;
 }
 
 /**

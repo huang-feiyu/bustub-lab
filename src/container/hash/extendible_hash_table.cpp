@@ -179,22 +179,14 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
 
   // Re-organize previous buckets
   uint32_t local_depth = dir_page->GetLocalDepth(img_id);
-  uint32_t diff = 1 << local_depth;
-  for (uint32_t i = bkt_id; i >= diff; i -= diff) {
-    dir_page->SetBucketPageId(i, bkt_page_id);
-    dir_page->SetLocalDepth(i, local_depth);
-  }
-  for (uint32_t i = bkt_id; i < dir_page->Size(); i += diff) {
-    dir_page->SetBucketPageId(i, bkt_page_id);
-    dir_page->SetLocalDepth(i, local_depth);
-  }
-  for (uint32_t i = img_id; i >= diff; i -= diff) {
-    dir_page->SetBucketPageId(i, img_page_id);
-    dir_page->SetLocalDepth(i, local_depth);
-  }
-  for (uint32_t i = img_id; i < dir_page->Size(); i += diff) {
-    dir_page->SetBucketPageId(i, img_page_id);
-    dir_page->SetLocalDepth(i, local_depth);
+  for (uint32_t i = 0; i < dir_page->Size(); i++) {
+    if (dir_page->GetBucketPageId(i) == bkt_page_id) {
+      dir_page->SetBucketPageId(i, bkt_page_id);
+      dir_page->SetLocalDepth(i, local_depth);
+    } else if (dir_page->GetBucketPageId(i) == img_page_id) {
+      dir_page->SetBucketPageId(i, img_page_id);
+      dir_page->SetLocalDepth(i, local_depth);
+    }
   }
 
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true));
@@ -216,15 +208,18 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   auto bkt_page = FetchBucketPage(bkt_page_id);
   auto success = bkt_page->Remove(key, value, comparator_);
 
+  // case 1: Merging must be attempted when a bucket becomes empty
+  if (bkt_page->IsEmpty()) {
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+    assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
+    table_latch_.WUnlock();
+    Merge(transaction, key, value);  // leave everything to Merge
+    return success;
+  }
+
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
   assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
   table_latch_.WUnlock();
-
-  // case 1: Merging must be attempted when a bucket becomes empty
-  if (bkt_page->IsEmpty()) {
-    Merge(transaction, key, value);  // leave everything to Merge
-  }
-
   // case 2: no bucket merging
   return success;
 }
