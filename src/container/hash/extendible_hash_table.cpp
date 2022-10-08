@@ -209,19 +209,16 @@ bool HASH_TABLE_TYPE::Remove(Transaction *transaction, const KeyType &key, const
   auto bkt_page = FetchBucketPage(bkt_page_id);
   auto success = bkt_page->Remove(key, value, comparator_);
 
-  // case 1: Merging must be attempted when a bucket becomes empty
-  if (success && bkt_page->IsEmpty()) {
-    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
-    assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
-    table_latch_.WUnlock();
-    Merge(transaction, key, value);  // leave everything to Merge
-    return success;
-  }
-
-  // case 2: no bucket merging
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
   assert(buffer_pool_manager_->UnpinPage(bkt_page_id, true));
   table_latch_.WUnlock();
+
+  // case 1: Merging must be attempted when a bucket becomes empty
+  if (success && bkt_page->IsEmpty()) {
+    Merge(transaction, key, value);  // leave everything to Merge
+  }
+
+  // case 2: no bucket merging
   return success;
 }
 
@@ -241,31 +238,45 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
   if (!bkt_page->IsEmpty() ||                                                // premise 1
       dir_page->GetLocalDepth(bkt_id) == 0 ||                                // premise 2
       dir_page->GetLocalDepth(bkt_id) != dir_page->GetLocalDepth(img_id)) {  // premise 3
+    assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+    assert(buffer_pool_manager_->UnpinPage(bkt_page_id, false));
     table_latch_.WUnlock();
     return;
   }
 
   // Delete the empty page
-  auto img_page_id = dir_page->GetBucketPageId(img_id);
-  auto img_page = FetchBucketPage(img_page_id);
   assert(buffer_pool_manager_->UnpinPage(bkt_page_id, false));
+  assert(buffer_pool_manager_->DeletePage(bkt_page_id));
+
+  // Points to image page
+  auto img_page_id = dir_page->GetBucketPageId(img_id);
   dir_page->SetBucketPageId(bkt_id, img_page_id);
 
   // Decrement local depth
   dir_page->DecrLocalDepth(bkt_id);
   dir_page->DecrLocalDepth(img_id);
 
-  if (dir_page->CanShrink()) {
+  assert(dir_page->GetBucketPageId(bkt_id) == dir_page->GetBucketPageId(img_id) &&
+         dir_page->GetLocalDepth(bkt_id) == dir_page->GetLocalDepth(img_id));
+
+  // Re-organize previous buckets
+  uint32_t local_depth = dir_page->GetLocalDepth(img_id);
+  uint32_t diff = 1 << local_depth;
+  for (uint32_t i = bkt_id - diff; i >= diff; i -= diff) {
+    dir_page->SetBucketPageId(i, img_page_id);
+    dir_page->SetLocalDepth(i, local_depth);
+  }
+  for (uint32_t i = bkt_id + diff; i < dir_page->Size(); i += diff) {
+    dir_page->SetBucketPageId(i, img_page_id);
+    dir_page->SetLocalDepth(i, local_depth);
+  }
+
+  while (dir_page->CanShrink()) {
     dir_page->DecrGlobalDepth();
   }
 
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true));
-  assert(buffer_pool_manager_->UnpinPage(img_page_id, false));
   table_latch_.WUnlock();
-
-  if (img_page->IsEmpty()) {
-    Merge(transaction, key, value);
-  }
 }
 
 /*****************************************************************************

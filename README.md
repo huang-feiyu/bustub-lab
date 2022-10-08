@@ -47,6 +47,8 @@ There are some helper functions that I do not understand.
 > For concurrency control now, I just use a big Writer Latch to make everything
 > consequential.
 
+Take a look at [Extendible Hashing](https://github.com/nitish6174/extendible-hashing).
+
 * bucket splitting: Split a bucket if there is no room for insertion,
   i.e. insert to a full bucket.
 * bucket merging: Merging must be attempted when a bucket becomes empty.
@@ -71,9 +73,12 @@ Otherwise, follow the steps below:
 
 Remove: Remove k/v, check whether the bucket is empty: if is, return.
 Otherwise, follow the steps below:
-1. Delete the empty page: bkt_id points to its image
-2. Decrement local depth
-3. Merge until image page is not null
+1. Check three primitives
+2. Delete bucket page
+3. Prev bkt points to img page
+4. Decrement local depth
+5. Re-organize previous buckets
+6. Shrink if needed
 
 ### Debug
 

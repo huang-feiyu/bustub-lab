@@ -166,7 +166,7 @@ void HASH_TABLE_BUCKET_TYPE::Reset() {
   size_ = 0;
   memset(occupied_, 0, sizeof(occupied_));
   memset(readable_, 0, sizeof(readable_));
-//  memset(array_, 0, sizeof(array_));
+  //  memset(array_, 0, sizeof(array_));
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
