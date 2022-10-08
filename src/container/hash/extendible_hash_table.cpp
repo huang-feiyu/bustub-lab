@@ -134,38 +134,60 @@ bool HASH_TABLE_TYPE::SplitInsert(Transaction *transaction, const KeyType &key, 
   table_latch_.WLock();
 
   auto dir_page = FetchDirectoryPage();
+  auto bkt_id = KeyToDirectoryIndex(key, dir_page);
   auto bkt_page_id = static_cast<int>(KeyToPageId(key, dir_page));
   auto bkt_page = FetchBucketPage(bkt_page_id);
-  assert(bkt_page->IsFull());
+  assert(bkt_page->IsFull());  // NOTE: Might wrong, concurrency issue
+
+  // Increment local depth
+  dir_page->IncrLocalDepth(bkt_id);
 
   // Check if hash table has to grow directory?
-  auto bkt_id = KeyToDirectoryIndex(key, dir_page);
-  auto img_id = dir_page->GetSplitImageIndex(bkt_id);
-  auto img_page_id = dir_page->GetBucketPageId(img_id);
-  if (img_page_id != bkt_page_id) {
-    // split after a while, we need to "make" its img bkt and then split it
+  if (dir_page->GetLocalDepth(bkt_id) > dir_page->GetGlobalDepth()) {
     dir_page->IncrGlobalDepth();
   }
 
-  // split the bucket: increment local depth
-  dir_page->IncrLocalDepth(bkt_id);
-  dir_page->IncrLocalDepth(img_id);
-
-  img_id = dir_page->GetSplitImageIndex(KeyToDirectoryIndex(key, dir_page));
-  img_page_id = dir_page->GetBucketPageId(img_id);
+  // Initialize image bucket page
+  auto img_id = dir_page->GetSplitImageIndex(bkt_id);
+  page_id_t img_page_id = dir_page->GetBucketPageId(img_id);
   assert(img_page_id == bkt_page_id);
-
-  // split the bucket: re-organize everything
   auto img_page = reinterpret_cast<HASH_TABLE_BUCKET_TYPE *>(buffer_pool_manager_->NewPage(&img_page_id)->GetData());
-  dir_page->SetBucketPageId(img_id, img_page_id);
-  auto size = bkt_page->NumReadable();
-  for (uint32_t i = 0; i < size; i++) {
-    auto k_tmp = bkt_page->KeyAt(i);
-    auto v_tmp = bkt_page->ValueAt(i);
-    if (KeyToDirectoryIndex(key, dir_page) == img_id) {
-      img_page->Insert(k_tmp, v_tmp, comparator_);
-      bkt_page->RemoveAt(i);
+  assert(img_page_id != bkt_page_id);
+  dir_page->SetBucketPageId(img_id, img_page_id);  // add to dir_page
+  assert(dir_page->GetLocalDepth(bkt_id) == dir_page->GetLocalDepth(img_id));
+
+  // Rehash all existing k/v pairs
+  auto kv_pairs = bkt_page->GetKVPairs();
+  bkt_page->Reset();
+  for (auto it = kv_pairs->begin(); it != kv_pairs->end(); it++) {
+    auto k2v = it.base();
+    uint32_t tgt_id = Hash(k2v->first) & dir_page->GetLocalDepthMask(img_id);
+    assert(tgt_id == img_id || tgt_id == bkt_id);
+    if (tgt_id == img_id) {
+      assert(img_page->Insert(k2v->first, k2v->second, comparator_));
+    } else {
+      assert(bkt_page->Insert(k2v->first, k2v->second, comparator_));
     }
+  }
+
+  // Re-organize previous buckets
+  uint32_t local_depth = dir_page->GetLocalDepth(img_id);
+  uint32_t diff = 1 << local_depth;
+  for (uint32_t i = bkt_id - diff; i >= diff; i -= diff) {
+    dir_page->SetBucketPageId(i, bkt_page_id);
+    dir_page->SetLocalDepth(i, local_depth);
+  }
+  for (uint32_t i = bkt_id + diff; i < dir_page->Size(); i += diff) {
+    dir_page->SetBucketPageId(i, bkt_page_id);
+    dir_page->SetLocalDepth(i, local_depth);
+  }
+  for (uint32_t i = img_id - diff; i >= diff; i -= diff) {
+    dir_page->SetBucketPageId(i, img_page_id);
+    dir_page->SetLocalDepth(i, local_depth);
+  }
+  for (uint32_t i = img_id + diff; i < dir_page->Size(); i += diff) {
+    dir_page->SetBucketPageId(i, img_page_id);
+    dir_page->SetLocalDepth(i, local_depth);
   }
 
   assert(buffer_pool_manager_->UnpinPage(directory_page_id_, true));

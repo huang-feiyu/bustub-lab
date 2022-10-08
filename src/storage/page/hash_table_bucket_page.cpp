@@ -150,6 +150,26 @@ bool HASH_TABLE_BUCKET_TYPE::IsEmpty() {
 }
 
 template <typename KeyType, typename ValueType, typename KeyComparator>
+std::unique_ptr<std::vector<MappingType>> HASH_TABLE_BUCKET_TYPE::GetKVPairs() {
+  auto copy = std::make_unique<std::vector<MappingType>>();
+  for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {
+    if (IsReadable(i)) {
+      copy->push_back(array_[i]);
+    }
+  }
+  return copy;
+}
+
+template <typename KeyType, typename ValueType, typename KeyComparator>
+void HASH_TABLE_BUCKET_TYPE::Reset() {
+  // zero out everything
+  size_ = 0;
+  memset(occupied_, 0, sizeof(occupied_));
+  memset(readable_, 0, sizeof(readable_));
+//  memset(array_, 0, sizeof(array_));
+}
+
+template <typename KeyType, typename ValueType, typename KeyComparator>
 uint32_t HASH_TABLE_BUCKET_TYPE::GetFreeId() {
   // NOTE: IsReadable or IsOccupied?
   for (uint32_t i = 0; i < BUCKET_ARRAY_SIZE; i++) {

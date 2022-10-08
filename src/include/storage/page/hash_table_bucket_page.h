@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -139,9 +140,14 @@ class HashTableBucketPage {
   bool IsEmpty();
 
   /**
-   * @return the lowest bucket id we can use
+   * @return all k/v pairs
    */
-  uint32_t GetFreeId();
+  std::unique_ptr<std::vector<MappingType>> GetKVPairs();
+
+  /**
+   * Reset everything
+   */
+  void Reset();
 
   /**
    * Prints the bucket's occupancy information
@@ -155,6 +161,11 @@ class HashTableBucketPage {
   // 0 if tombstone/brand new (never occupied), 1 otherwise.
   char readable_[(BUCKET_ARRAY_SIZE - 1) / 8 + 1];
   MappingType array_[0];
+
+  /**
+   * @return the lowest bucket id we can use
+   */
+  uint32_t GetFreeId();
 };
 
 }  // namespace bustub

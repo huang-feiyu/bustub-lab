@@ -61,11 +61,13 @@ There are some helper functions that I do not understand.
 
 Insert: Check whether the bucket is full: if not, just insert it.
 Otherwise, follow the steps below:
-1. Check if hash table has to **grow directory**: if is, increment global depth
-   and copy bucket page id; otherwise, do nothing
-2. Split the bucket to be inserted: before splitting, increment local depth;
-   get the split image bucket page and re-organize the existing k/v pairs
-3. Insert the k/v until success
+1. Before splitting, increment local depth
+2. Check if hash table has to **grow directory**: if is(LD > GD), increment GD 
+3. Initialize a split image bucket page
+4. Re-hash the existing k/v pairs into split image bucket and previous bucket
+5. Re-organize previous buckets, the prev half points to bkt, the next half
+   points to img
+6. Insert the k/v until success or fail
 
 Remove: Remove k/v, check whether the bucket is empty: if is, return.
 Otherwise, follow the steps below:
