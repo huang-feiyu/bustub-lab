@@ -77,7 +77,7 @@ Otherwise, follow the steps below:
 2. Delete bucket page
 3. Prev bkt points to img page
 4. Decrement local depth
-5. Re-organize previous buckets
+5. Re-organize all buckets
 6. Shrink if needed
 
 ### Debug

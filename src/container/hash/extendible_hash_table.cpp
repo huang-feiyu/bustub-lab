@@ -259,16 +259,13 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
   assert(dir_page->GetBucketPageId(bkt_id) == dir_page->GetBucketPageId(img_id) &&
          dir_page->GetLocalDepth(bkt_id) == dir_page->GetLocalDepth(img_id));
 
-  // Re-organize previous buckets
+  // Re-organize all buckets
   uint32_t local_depth = dir_page->GetLocalDepth(img_id);
-  uint32_t diff = 1 << local_depth;
-  for (uint32_t i = bkt_id - diff; i >= diff; i -= diff) {
-    dir_page->SetBucketPageId(i, img_page_id);
-    dir_page->SetLocalDepth(i, local_depth);
-  }
-  for (uint32_t i = bkt_id + diff; i < dir_page->Size(); i += diff) {
-    dir_page->SetBucketPageId(i, img_page_id);
-    dir_page->SetLocalDepth(i, local_depth);
+  for (uint32_t i = 0; i < dir_page->Size(); i++) {
+    if (dir_page->GetBucketPageId(i) == bkt_page_id || dir_page->GetBucketPageId(i) == img_page_id) {
+      dir_page->SetBucketPageId(i, img_page_id);
+      dir_page->SetLocalDepth(i, local_depth);
+    }
   }
 
   while (dir_page->CanShrink()) {
