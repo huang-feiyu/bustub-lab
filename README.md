@@ -21,7 +21,7 @@ The rest job is to follow extendible hash table scheme to implement
 `Insert`, `Remove`, `GetValue`. And we also need to support multi-threading,
 aka. Concurrency Control. (Much easier than B<sup>+</sup>Tree)
 
-## Task#1: Page Layout
+## Task #1: Page Layout
 
 `bucket_id` is the hash value of a specific key.
 
@@ -42,7 +42,7 @@ aka. Concurrency Control. (Much easier than B<sup>+</sup>Tree)
 
 There are some helper functions that I do not understand.
 
-## Task#2: Hash Table Implementation
+## Task #2: Hash Table Implementation
 
 > For concurrency control now, I just use a big Writer Latch to make everything
 > consequential.
@@ -161,3 +161,10 @@ bool HashTableDirectoryPage::CanShrink() {
   return true;
 }
 ```
+
+## TASK #3 - Concurrency Control
+
+In this task, we will change the big lock scheme to 2-lock scheme. That is:
+* Only when we call Merge or SplitInsert, table latch is WLocked.
+  Other operation will acquire a RLocked table latch.
+* For writing/reading to a bucket, we use page latch to control.
