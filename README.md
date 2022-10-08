@@ -143,3 +143,21 @@ Sample test wrong...
 +   return Insert(transaction, key, value);
 + }
 ```
+
+* GradeScope GrowShrinkTest GD assertion failed => bug05
+
+[Test files](https://github.com/smilingpoplar/cmu-15445/tree/main/test)
+
+<s>It's weird: local GrowShrinkTest is OK, but failed in GradeScope.</s>
+
+```diff
+bool HashTableDirectoryPage::CanShrink() {
+- for (uint32_t i = 0; i < Size(); i++) {
++ for (uint32_t i = 0; i < DIRECTORY_ARRAY_SIZE; i++) {
+    if (GetLocalDepth(i) >= GetGlobalDepth()) {
+      return false;
+    }
+  }
+  return true;
+}
+```
