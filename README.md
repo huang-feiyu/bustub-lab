@@ -200,3 +200,13 @@ bool HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std
   return success;
 }
 ```
+
+---
+
+```
+Time:   21 Hours
+Score:  100/100 (35.79s)
+Author: Ludwig Huang
+Date:   2022-10-09
+```
+
