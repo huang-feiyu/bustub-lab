@@ -23,6 +23,7 @@
 * [Note13](./Notes/Note13.md): Query Execution - Part II
 * [Note14](./Notes/Note14.md): Query Optimization - Part I
 * [Note15](./Notes/Note15.md): Query Optimization - Part II
+* [Note16](./Notes/Note16.md): Concurrency Control Theory
 
 ## Homework
 
