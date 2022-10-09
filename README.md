@@ -168,3 +168,35 @@ In this task, we will change the big lock scheme to 2-lock scheme. That is:
 * Only when we call Merge or SplitInsert, table latch is WLocked.
   Other operation will acquire a RLocked table latch.
 * For writing/reading to a bucket, we use page latch to control.
+
+### Debug
+
+* No more free page => bug06
+
+Need a re-design.
+
+```diff
+template <typename KeyType, typename ValueType, typename KeyComparator>
+Page *HASH_TABLE_TYPE::FetchLatchPage(page_id_t bucket_page_id) {
+  Page *page = buffer_pool_manager_->FetchPage(bucket_page_id);
+  return page;
+}
+
+bool HASH_TABLE_TYPE::GetValue(Transaction *transaction, const KeyType &key, std::vector<ValueType> *result) {
+  table_latch_.RLock();
+
+  auto dir_page = FetchDirectoryPage();
+  auto bkt_page_id = KeyToPageId(key, dir_page);
+  auto bkt_page = FetchBucketPage(bkt_page_id);
+  auto lck_page = FetchLatchPage(bkt_page_id);
+  lck_page->RLatch();
+  auto success = bkt_page->GetValue(key, comparator_, result);
+
+  assert(buffer_pool_manager_->UnpinPage(directory_page_id_, false));
+  assert(buffer_pool_manager_->UnpinPage(bkt_page_id, false));
++ assert(buffer_pool_manager_->UnpinPage(bkt_page_id, false));
+  lck_page->RUnlatch();
+  table_latch_.RUnlock();
+  return success;
+}
+```
