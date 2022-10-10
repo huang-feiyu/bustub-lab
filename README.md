@@ -24,6 +24,7 @@
 * [Note14](./Notes/Note14.md): Query Optimization - Part I
 * [Note15](./Notes/Note15.md): Query Optimization - Part II
 * [Note16](./Notes/Note16.md): Concurrency Control Theory
+* [Note17](./Notes/Note17.md): Two-Phase Locking
 
 ## Homework
 
