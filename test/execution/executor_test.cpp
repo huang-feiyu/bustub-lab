@@ -630,7 +630,7 @@ TEST_F(ExecutorTest, DISABLED_SimpleGroupByAggregation) {
 }
 
 // SELECT colA, colB FROM test_3 LIMIT 10
-TEST_F(ExecutorTest, DISABLED_SimpleLimitTest) {
+TEST_F(ExecutorTest, SimpleLimitTest) {
   auto *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_3");
   auto &schema = table_info->schema_;
 
@@ -650,6 +650,34 @@ TEST_F(ExecutorTest, DISABLED_SimpleLimitTest) {
 
   // Verify results
   ASSERT_EQ(result_set.size(), 10);
+  for (auto i = 0UL; i < result_set.size(); ++i) {
+    auto &tuple = result_set[i];
+    ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(), static_cast<int32_t>(i));
+    ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colB")).GetAs<int32_t>(), static_cast<int32_t>(i));
+  }
+}
+
+// SELECT colA, colB FROM test_3 LIMIT 100000
+TEST_F(ExecutorTest, BigLimitTest) {
+  auto *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_3");
+  auto &schema = table_info->schema_;
+
+  auto *col_a = MakeColumnValueExpression(schema, 0, "colA");
+  auto *col_b = MakeColumnValueExpression(schema, 0, "colB");
+  auto *out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}});
+
+  // Construct sequential scan
+  auto seq_scan_plan = std::make_unique<SeqScanPlanNode>(out_schema, nullptr, table_info->oid_);
+
+  // Construct the limit plan
+  auto limit_plan = std::make_unique<LimitPlanNode>(out_schema, seq_scan_plan.get(), 10000);
+
+  // Execute sequential scan with limit
+  std::vector<Tuple> result_set{};
+  GetExecutionEngine()->Execute(limit_plan.get(), &result_set, GetTxn(), GetExecutorContext());
+
+  // Verify results
+  ASSERT_EQ(result_set.size(), TEST3_SIZE);  // no such many tuples
   for (auto i = 0UL; i < result_set.size(); ++i) {
     auto &tuple = result_set[i];
     ASSERT_EQ(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>(), static_cast<int32_t>(i));

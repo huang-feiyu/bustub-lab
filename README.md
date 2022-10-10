@@ -19,3 +19,5 @@ What we need to do is to implement an executor for every node.
 
 * Sequential Scan
   * Node: table, predicate
+* Limit
+  * Node: limit, child
