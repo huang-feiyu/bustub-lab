@@ -3,6 +3,7 @@
 echo "zip project3-submission.zip"
 
 zip project3-submission.zip \
+    build_support/gtest_CMakeLists.txt.in \
     src/include/storage/page/tmp_tuple_page.h \
     src/include/buffer/lru_replacer.h \
     src/buffer/lru_replacer.cpp \
