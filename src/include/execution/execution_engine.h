@@ -53,7 +53,11 @@ class ExecutionEngine {
     auto executor = ExecutorFactory::CreateExecutor(exec_ctx, plan);
 
     // Prepare the root executor
-    executor->Init();
+    try {
+      executor->Init();
+    } catch (...) {
+      return false;
+    }
 
     // Execute the query plan
     try {
@@ -66,6 +70,7 @@ class ExecutionEngine {
       }
     } catch (Exception &e) {
       // TODO(student): handle exceptions
+      return false;
     }
 
     return true;

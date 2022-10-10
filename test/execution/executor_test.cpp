@@ -87,7 +87,7 @@ using ComparatorType = GenericComparator<8>;
 using HashFunctionType = HashFunction<KeyType>;
 
 // SELECT col_a, col_b FROM test_1 WHERE col_a < 500
-TEST_F(ExecutorTest, DISABLED_SimpleSeqScanTest) {
+TEST_F(ExecutorTest, SimpleSeqScanTest) {
   // Construct query plan
   TableInfo *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
   const Schema &schema = table_info->schema_;
@@ -108,6 +108,46 @@ TEST_F(ExecutorTest, DISABLED_SimpleSeqScanTest) {
     ASSERT_TRUE(tuple.GetValue(out_schema, out_schema->GetColIdx("colA")).GetAs<int32_t>() < 500);
     ASSERT_TRUE(tuple.GetValue(out_schema, out_schema->GetColIdx("colB")).GetAs<int32_t>() < 10);
   }
+}
+
+// SELECT col_b FROM test_1 WHERE col_a < 500
+TEST_F(ExecutorTest, SampleSeqScanTest) {
+  // Construct query plan
+  TableInfo *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
+  const Schema &schema = table_info->schema_;
+  auto *col_a = MakeColumnValueExpression(schema, 0, "colA");
+  auto *col_b = MakeColumnValueExpression(schema, 0, "colB");
+  auto *const500 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(500));
+  auto *predicate = MakeComparisonExpression(col_a, const500, ComparisonType::LessThan);
+  auto *out_schema = MakeOutputSchema({{"colB", col_b}});
+  SeqScanPlanNode plan{out_schema, predicate, table_info->oid_};
+
+  // Execute
+  std::vector<Tuple> result_set{};
+  ASSERT_TRUE(GetExecutionEngine()->Execute(&plan, &result_set, GetTxn(), GetExecutorContext()));
+
+  // Verify
+  ASSERT_EQ(result_set.size(), 500);
+  for (const auto &tuple : result_set) {
+    ASSERT_TRUE(tuple.GetValue(out_schema, out_schema->GetColIdx("colB")).GetAs<int32_t>() < 10);
+  }
+}
+
+// SELECT col_a, col_b, col_c FROM test_1 WHERE col_a < 500
+TEST_F(ExecutorTest, WrongSeqScanTest) {
+  // Construct query plan
+  TableInfo *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
+  const Schema &schema = table_info->schema_;
+  auto *col_a = MakeColumnValueExpression(schema, 0, "colA");
+  auto *col_b = MakeColumnValueExpression(schema, 0, "colB");
+  auto *const500 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(500));
+  auto *predicate = MakeComparisonExpression(col_a, const500, ComparisonType::LessThan);
+  auto *out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}, {"colX", col_a}});
+  SeqScanPlanNode plan{out_schema, predicate, table_info->oid_};
+
+  // Execute
+  std::vector<Tuple> result_set{};
+  ASSERT_FALSE(GetExecutionEngine()->Execute(&plan, &result_set, GetTxn(), GetExecutorContext()));
 }
 
 // INSERT INTO empty_table2 VALUES (100, 10), (101, 11), (102, 12)
