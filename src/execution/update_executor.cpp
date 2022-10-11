@@ -27,24 +27,24 @@ void UpdateExecutor::Init() {
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
-  auto old_tuple = std::make_unique<Tuple>();
+  Tuple old_tuple;
   auto updated = false;
 
-  if (!child_executor_->Next(old_tuple.get(), rid)) {
-    LOG_DEBUG("No more next from child");
+  if (!child_executor_->Next(&old_tuple, rid)) {
     return false;
   }
 
-  auto u_tuple = GenerateUpdatedTuple(*old_tuple.get());
-  std::cout << "Old tuple " << old_tuple->ToString(&table_info_->schema_) << std::endl;
-  std::cout << "U tuple " << u_tuple.ToString(&table_info_->schema_) << std::endl;
+  auto u_tuple = GenerateUpdatedTuple(old_tuple);
   updated = table_info_->table_->UpdateTuple(u_tuple, *rid, exec_ctx_->GetTransaction());
 
   // if updated, need to insert into indexes
   if (updated && !index_infos_.empty()) {
     for (auto index : index_infos_) {
-      index->index_->DeleteEntry(*old_tuple.get(), *rid, exec_ctx_->GetTransaction());
-      index->index_->InsertEntry(u_tuple, *rid, exec_ctx_->GetTransaction());
+      auto key = old_tuple.KeyFromTuple(table_info_->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+      index->index_->DeleteEntry(key, *rid, exec_ctx_->GetTransaction());
+
+      key = u_tuple.KeyFromTuple(table_info_->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+      index->index_->InsertEntry(key, *rid, exec_ctx_->GetTransaction());
     }
   }
 

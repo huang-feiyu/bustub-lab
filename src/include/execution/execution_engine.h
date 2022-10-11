@@ -59,12 +59,15 @@ class ExecutionEngine {
       return false;
     }
 
+    bool is_modify = plan->GetType() == PlanType::Update || plan->GetType() == PlanType::Insert ||
+                     plan->GetType() == PlanType::Delete;
+
     // Execute the query plan
     try {
       Tuple tuple;
       RID rid;
       while (executor->Next(&tuple, &rid)) {
-        if (result_set != nullptr) {
+        if (!is_modify && result_set != nullptr) {
           result_set->push_back(tuple);
         }
       }
