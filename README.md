@@ -26,3 +26,5 @@ What we need to do is to implement an executor for every node.
   * Need also to insert into indexes
 * Update
   * Node: update values, update attrs, child, table
+* Delete
+  * Node: child, table
