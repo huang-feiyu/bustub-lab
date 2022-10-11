@@ -21,3 +21,6 @@ What we need to do is to implement an executor for every node.
   * Node: table, predicate
 * Limit
   * Node: limit, child
+* Insert
+  * Node: raw values, child, table
+  * Need also to insert into indexes
