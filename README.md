@@ -28,3 +28,5 @@ What we need to do is to implement an executor for every node.
   * Node: update values, update attrs, child, table
 * Delete
   * Node: child, table
+* Distinct
+  * Node: output_schema (with distinct keys)

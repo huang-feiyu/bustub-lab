@@ -13,7 +13,9 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "execution/executors/abstract_executor.h"
 #include "execution/plans/distinct_plan.h"
@@ -53,5 +55,10 @@ class DistinctExecutor : public AbstractExecutor {
   const DistinctPlanNode *plan_;
   /** The child executor from which tuples are obtained */
   std::unique_ptr<AbstractExecutor> child_executor_;
+  /** The hash table of tuples with multiple keys */
+  std::unordered_map<uint32_t, Tuple> hash_table_;
+
+  /** @return A hash value for a tuple with multiple distinct keys */
+  uint32_t HashValue(const Tuple &tuple);
 };
 }  // namespace bustub
