@@ -28,13 +28,6 @@ void SeqScanExecutor::Init() {
     schema.GetColIdx(col.GetName());  // inside function: if not exist, throw a logical_expect
   }
 
-  // construct key_attrs
-  key_attrs_.reserve(o_schema->GetColumnCount());
-  for (uint32_t i = 0; i < o_schema->GetColumnCount(); i++) {
-    auto col_name = o_schema->GetColumn(i).GetName();
-    key_attrs_.push_back(schema.GetColIdx(col_name));
-  }
-
   cur_ = table_info_->table_->Begin(exec_ctx_->GetTransaction());
   end_ = table_info_->table_->End();
 }
@@ -45,8 +38,12 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
     assert(item->IsAllocated());
     auto pred = plan_->GetPredicate();
     if (pred == nullptr || pred->Evaluate(&(*item), &table_info_->schema_).GetAs<bool>()) {
-      *tuple = item->KeyFromTuple(table_info_->schema_, *plan_->OutputSchema(), key_attrs_);
-      *rid = tuple->GetRid();
+      std::vector<Value> vals;
+      for (auto &col : GetOutputSchema()->GetColumns()) {
+        vals.emplace_back(col.GetExpr()->Evaluate(&*item, &table_info_->schema_));
+      }
+      *tuple = Tuple(vals, GetOutputSchema());
+      *rid = item->GetRid();
       return true;
     }
   }

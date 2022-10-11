@@ -55,6 +55,5 @@ class SeqScanExecutor : public AbstractExecutor {
   TableIterator end_;
   /** For convenience */
   TableInfo *table_info_;
-  std::vector<uint32_t> key_attrs_;
 };
 }  // namespace bustub
