@@ -53,7 +53,8 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   // if inserted, need to insert into indexes
   if (inserted && !index_infos_.empty()) {
     for (auto index : index_infos_) {
-      index->index_->InsertEntry(*i_tuple, *rid, exec_ctx_->GetTransaction());
+      auto key = i_tuple->KeyFromTuple(table_info_->schema_, index->key_schema_, index->index_->GetKeyAttrs());
+      index->index_->InsertEntry(key, *rid, exec_ctx_->GetTransaction());
     }
   }
 
