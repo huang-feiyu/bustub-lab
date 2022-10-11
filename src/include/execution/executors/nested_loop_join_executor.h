@@ -59,6 +59,8 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
   std::unique_ptr<AbstractExecutor> left_;
   /** Right table operator */
   std::unique_ptr<AbstractExecutor> right_;
+  /** Previous left tuple */
+  std::unique_ptr<Tuple> prev_tuple_;
 };
 
 }  // namespace bustub
