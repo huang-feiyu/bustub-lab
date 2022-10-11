@@ -17,11 +17,39 @@ namespace bustub {
 
 UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
-void UpdateExecutor::Init() {}
+void UpdateExecutor::Init() {
+  table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->TableOid());
+  index_infos_ = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
 
-bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) { return false; }
+  child_executor_->Init();
+}
+
+bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  auto old_tuple = std::make_unique<Tuple>();
+  auto updated = false;
+
+  if (!child_executor_->Next(old_tuple.get(), rid)) {
+    LOG_DEBUG("No more next from child");
+    return false;
+  }
+
+  auto u_tuple = GenerateUpdatedTuple(*old_tuple.get());
+  std::cout << "Old tuple " << old_tuple->ToString(&table_info_->schema_) << std::endl;
+  std::cout << "U tuple " << u_tuple.ToString(&table_info_->schema_) << std::endl;
+  updated = table_info_->table_->UpdateTuple(u_tuple, *rid, exec_ctx_->GetTransaction());
+
+  // if updated, need to insert into indexes
+  if (updated && !index_infos_.empty()) {
+    for (auto index : index_infos_) {
+      index->index_->DeleteEntry(*old_tuple.get(), *rid, exec_ctx_->GetTransaction());
+      index->index_->InsertEntry(u_tuple, *rid, exec_ctx_->GetTransaction());
+    }
+  }
+
+  return updated;
+}
 
 Tuple UpdateExecutor::GenerateUpdatedTuple(const Tuple &src_tuple) {
   const auto &update_attrs = plan_->GetUpdateAttr();
