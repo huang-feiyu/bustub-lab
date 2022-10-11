@@ -30,3 +30,5 @@ What we need to do is to implement an executor for every node.
   * Node: child, table
 * Distinct
   * Node: output_schema (with distinct keys)
+* Nested Loop Join
+  * Node: left_table, right_table, predicate
