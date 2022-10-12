@@ -34,6 +34,8 @@ What we need to do is to implement an executor for every node.
   * Node: left_table, right_table, predicate
 * Hash Join (Need to handle duplicate keys)
   * Node: left_table, right_table, left_key, right_key, predicate
+* Aggregation
+  * Node: child, having clause, agg_keys, 
 
 ### Debug
 
