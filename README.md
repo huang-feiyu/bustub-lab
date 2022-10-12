@@ -34,3 +34,26 @@ What we need to do is to implement an executor for every node.
   * Node: left_table, right_table, predicate
 * Hash Join (Need to handle duplicate keys)
   * Node: left_table, right_table, left_key, right_key, predicate
+
+### Debug
+
+<b>*</b> SchemaChangeSequentialScan failed => bug01
+
+Remove redundant validation step.
+
+```diff
+@@ -21,13 +21,6 @@ void SeqScanExecutor::Init() {
+   // retrieve the corresponding table to scan
+   table_info_ = exec_ctx_->GetCatalog()->GetTable(plan_->GetTableOid());
+
+-  // validate outputSchema
+-  auto schema = table_info_->schema_;
+-  auto o_schema = plan_->OutputSchema();
+-  for (auto &col : o_schema->GetColumns()) {
+-    schema.GetColIdx(col.GetName());  // inside function: if not exist, throw a logical_expect
+-  }
+-
+   cur_ = table_info_->table_->Begin(exec_ctx_->GetTransaction());
+   end_ = table_info_->table_->End();
+ }
+```

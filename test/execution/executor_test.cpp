@@ -133,21 +133,22 @@ TEST_F(ExecutorTest, SampleSeqScanTest) {
   }
 }
 
-// SELECT col_a, col_b, col_c FROM test_1 WHERE col_a < 500
-TEST_F(ExecutorTest, WrongSeqScanTest) {
+// SELECT colA AS col1, colB AS col2 FROM test_1
+TEST_F(ExecutorTest, SchemaChangeSequentialScan) {
   // Construct query plan
   TableInfo *table_info = GetExecutorContext()->GetCatalog()->GetTable("test_1");
-  const Schema &schema = table_info->schema_;
-  auto *col_a = MakeColumnValueExpression(schema, 0, "colA");
-  auto *col_b = MakeColumnValueExpression(schema, 0, "colB");
-  auto *const500 = MakeConstantValueExpression(ValueFactory::GetIntegerValue(500));
-  auto *predicate = MakeComparisonExpression(col_a, const500, ComparisonType::LessThan);
-  auto *out_schema = MakeOutputSchema({{"colA", col_a}, {"colB", col_b}, {"colX", col_a}});
-  SeqScanPlanNode plan{out_schema, predicate, table_info->oid_};
+  Schema &schema = table_info->schema_;
+  auto *cola_a = MakeColumnValueExpression(schema, 0, "colA");
+  auto *cola_b = MakeColumnValueExpression(schema, 0, "colB");
+  auto *out_schema = MakeOutputSchema({{"col1", cola_a}, {"col2", cola_b}});
+  SeqScanPlanNode plan{out_schema, nullptr, table_info->oid_};
 
-  // Execute
+  // Execute sequential scan
   std::vector<Tuple> result_set{};
-  ASSERT_FALSE(GetExecutionEngine()->Execute(&plan, &result_set, GetTxn(), GetExecutorContext()));
+  GetExecutionEngine()->Execute(&plan, &result_set, GetTxn(), GetExecutorContext());
+
+  // Verify results
+  ASSERT_EQ(result_set.size(), 1000);
 }
 
 // INSERT INTO empty_table2 VALUES (100, 10), (101, 11), (102, 12)
