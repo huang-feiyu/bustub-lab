@@ -39,4 +39,5 @@
 * [p0](https://github.com/huang-feiyu/bustub-labs/tree/p0): C++ Primer (**100/100**)
 * [p1](https://github.com/huang-feiyu/bustub-labs/tree/p1): Buffer Pool Manager (**96/100**)
 * [p2](https://github.com/huang-feiyu/bustub-labs/tree/p2): Hash Index (**100/100**)
+* [p3](https://github.com/huang-feiyu/bustub-labs/tree/p3): Query Execution (**360/360**)
 
