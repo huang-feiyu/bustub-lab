@@ -13,7 +13,9 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
@@ -54,6 +56,17 @@ class HashJoinExecutor : public AbstractExecutor {
  private:
   /** The NestedLoopJoin plan node to be executed. */
   const HashJoinPlanNode *plan_;
+  /** Left table operator */
+  std::unique_ptr<AbstractExecutor> left_;
+  /** Right table operator */
+  std::unique_ptr<AbstractExecutor> right_;
+  /** The hash table of tuples with multiple keys */
+  std::unordered_map<uint32_t, std::vector<Tuple>> hash_table_;
+  /** Previous vector of tuples */
+  std::vector<Tuple> prev_tuples_{};
+
+  /** Naive hash function */
+  uint32_t HashValue(Value val);
 };
 
 }  // namespace bustub

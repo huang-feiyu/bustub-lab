@@ -30,7 +30,7 @@ What we need to do is to implement an executor for every node.
   * Node: child, table
 * Distinct
   * Node: output_schema (with distinct keys)
-* Nested Loop Join
+* Nested Loop Join (Need to handle duplicate keys)
   * Node: left_table, right_table, predicate
 * Hash Join (Need to handle duplicate keys)
-  * Node: left_table, right_table, predicate
+  * Node: left_table, right_table, left_key, right_key, predicate
