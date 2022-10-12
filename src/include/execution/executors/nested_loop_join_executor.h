@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
@@ -59,8 +60,11 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
   std::unique_ptr<AbstractExecutor> left_;
   /** Right table operator */
   std::unique_ptr<AbstractExecutor> right_;
-  /** Previous left tuple */
-  std::unique_ptr<Tuple> prev_tuple_;
+  /** All matched tuples */
+  std::vector<Tuple> tuples_;
+  /** Iterator */
+  std::vector<Tuple>::iterator cur_;
+  std::vector<Tuple>::iterator end_;
 };
 
 }  // namespace bustub

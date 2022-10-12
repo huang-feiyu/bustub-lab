@@ -60,5 +60,8 @@ Remove redundant validation step.
 
 <b>*</b> NestedLoopJoin issue => bug02
 
-Sometimes, there is one more tuple.
+Sometimes, there is one more tuple. Cannot find the bug ->
+Re-implement nested loop join [Naive version].
+
+I choose to do everything with `Init()`.
 
