@@ -78,3 +78,13 @@ bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
     auto hash = HashValue(val);
 
 ```
+
+---
+
+```
+Time:   16 Hours
+Score:  360/360
+Author: Ludwig Huang
+Date:   2022-10-12
+```
+
