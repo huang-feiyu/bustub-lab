@@ -56,7 +56,7 @@ bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
           vals.emplace_back(
               col.GetExpr()->EvaluateJoin(&l_tuple, left_->GetOutputSchema(), &r_tuple, right_->GetOutputSchema()));
         }
-        prev_tuples_.push_back(Tuple(vals, GetOutputSchema()));
+        prev_tuples_.emplace_back(Tuple(vals, GetOutputSchema()));
       }
       return Next(tuple, rid);
     }
