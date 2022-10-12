@@ -57,3 +57,8 @@ Remove redundant validation step.
    end_ = table_info_->table_->End();
  }
 ```
+
+<b>*</b> NestedLoopJoin issue => bug02
+
+Sometimes, there is one more tuple.
+

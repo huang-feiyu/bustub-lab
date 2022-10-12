@@ -30,7 +30,7 @@ void HashJoinExecutor::Init() {
   while (right_->Next(&r_tuple, &r_rid)) {
     auto val = plan_->RightJoinKeyExpression()->Evaluate(&r_tuple, right_->GetOutputSchema());
     auto hash = HashValue(val);
-    hash_table_[hash].push_back(r_tuple);
+    hash_table_[hash].emplace_back(r_tuple);
   }
 }
 
@@ -50,7 +50,7 @@ bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
     auto val = plan_->LeftJoinKeyExpression()->Evaluate(&l_tuple, right_->GetOutputSchema());
     auto hash = HashValue(val);
     if (hash_table_.count(hash) != 0) {
-      for (auto r_tuple : hash_table_[hash]) {
+      for (const Tuple &r_tuple : hash_table_[hash]) {
         std::vector<Value> vals;
         for (auto &col : GetOutputSchema()->GetColumns()) {
           vals.emplace_back(
@@ -65,7 +65,7 @@ bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
   return false;
 }
 
-uint32_t HashJoinExecutor::HashValue(Value val) {
+uint32_t HashJoinExecutor::HashValue(const Value &val) {
   // Naive/Stupid version: will this make sense?
   auto str = val.ToString();
   return murmur3::MurmurHash3_x64_128(str, GetOutputSchema()->GetColumnCount());

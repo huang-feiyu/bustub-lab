@@ -51,7 +51,7 @@ bool NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) {
       if (left_->Next(&l_tuple, &l_rid)) {
         prev_tuple_ = std::make_unique<Tuple>(l_tuple);
       } else {
-        prev_tuple_ = nullptr;  // for reading consistency
+        break;
       }
       continue;
     }

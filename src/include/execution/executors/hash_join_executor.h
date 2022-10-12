@@ -66,7 +66,7 @@ class HashJoinExecutor : public AbstractExecutor {
   std::vector<Tuple> prev_tuples_{};
 
   /** Naive hash function */
-  uint32_t HashValue(Value val);
+  uint32_t HashValue(const Value &val);
 };
 
 }  // namespace bustub
