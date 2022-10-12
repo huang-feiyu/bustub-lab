@@ -39,7 +39,7 @@ bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
   RID l_rid;
 
   if (!prev_tuples_.empty()) {
-    auto l_tuple = prev_tuples_.back();
+    l_tuple = prev_tuples_.back();
     prev_tuples_.pop_back();
     *tuple = l_tuple;
     *rid = l_tuple.GetRid();
@@ -47,7 +47,7 @@ bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
   }
 
   while (left_->Next(&l_tuple, &l_rid)) {
-    auto val = plan_->LeftJoinKeyExpression()->Evaluate(&l_tuple, right_->GetOutputSchema());
+    auto val = plan_->LeftJoinKeyExpression()->Evaluate(&l_tuple, left_->GetOutputSchema());
     auto hash = HashValue(val);
     if (hash_table_.count(hash) != 0) {
       for (const Tuple &r_tuple : hash_table_[hash]) {

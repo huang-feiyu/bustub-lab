@@ -65,3 +65,14 @@ Re-implement nested loop join [Naive version].
 
 I choose to do everything with `Init()`.
 
+<b>*</b> HashJoinOuterTableDuplicateJoinKeys failed => bug03
+
+```diff
+bool HashJoinExecutor::Next(Tuple *tuple, RID *rid) {
+
+  while (left_->Next(&l_tuple, &l_rid)) {
++   auto val = plan_->LeftJoinKeyExpression()->Evaluate(&l_tuple, left_->GetOutputSchema());
+-   auto val = plan_->LeftJoinKeyExpression()->Evaluate(&l_tuple, right_->GetOutputSchema());
+    auto hash = HashValue(val);
+
+```
