@@ -1,8 +1,8 @@
 #!/bin/bash
 
-echo "zip project3-submission.zip"
+echo "zip project4-submission.zip"
 
-zip project3-submission.zip \
+zip project4-submission.zip \
     build_support/gtest_CMakeLists.txt.in \
     src/include/storage/page/tmp_tuple_page.h \
     src/include/buffer/lru_replacer.h \
@@ -35,15 +35,17 @@ zip project3-submission.zip \
     src/execution/hash_join_executor.cpp \
     src/execution/aggregation_executor.cpp \
     src/execution/limit_executor.cpp \
-    src/execution/distinct_executor.cpp
+    src/execution/distinct_executor.cpp \
+    src/include/concurrency/lock_manager.h \
+    src/concurrency/lock_manager.cpp
 
 echo ""
 
 echo "move from Fedora bustub/ to Windows codefiles/"
 
-mv project3-submission.zip /mnt/hgfs/
+mv project4-submission.zip /mnt/hgfs/
 
 echo ""
 
-unzip -l /mnt/hgfs/project3-submission.zip
+unzip -l /mnt/hgfs/project4-submission.zip
 
