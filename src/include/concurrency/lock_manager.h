@@ -111,7 +111,54 @@ class LockManager {
   std::mutex latch_;
 
   /** Lock table for lock requests. */
-  std::unordered_map<RID, LockRequestQueue*> lock_table_;
+  std::unordered_map<RID, std::unique_ptr<LockRequestQueue>> lock_table_;
+
+  /*===--- Helper Functions ---===*/
+
+  /** Validate arguments when locking */
+  bool ValidateLocking(Transaction *txn, LockMode mode) {
+    auto txn_id = txn->GetTransactionId();
+
+    // Cannot lock when txn is *aborted*
+    if (txn->GetState() == TransactionState::ABORTED) {
+      LOG_DEBUG("Lock in aborted txn [%d]", txn_id);
+      return false;
+    }
+
+    // Cannot lock on *shrink phase*
+    if (txn->GetState() == TransactionState::SHRINKING) {
+      txn->SetState(TransactionState::ABORTED);
+      throw new TransactionAbortException(txn_id, AbortReason::LOCK_ON_SHRINKING);
+    }
+
+    // Cannot acquire S-lock on *Read Uncommitted*
+    if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED && mode == LockMode::SHARED) {
+      txn->SetState(TransactionState::ABORTED);
+      throw new TransactionAbortException(txn_id, AbortReason::LOCKSHARED_ON_READ_UNCOMMITTED);
+    }
+
+    BUSTUB_ASSERT(txn->GetState() == TransactionState::GROWING, "Only grant lock when growing");
+
+    return true;
+  }
+
+  /** Insert into request queue */
+  std::unique_ptr<LockRequestQueue> InsertQueue(Transaction *txn, const RID &rid, LockMode mode) {
+    if (lock_table_.find(rid) == lock_table_.end()) {
+      // First insert, init LockRequestQueue
+      latch_.lock();
+      lock_table_.emplace(std::make_pair(rid, std::make_unique<LockRequestQueue>()));
+      latch_.unlock();
+    }
+
+    // Insert into queue
+    auto lck_reqs = std::move(lock_table_.at(rid));
+    std::unique_lock u_lock{lck_reqs->latch_};
+    LockRequest lock_request{txn->GetTransactionId(), mode};
+    lck_reqs->request_queue_.emplace_back(lock_request);
+
+    return lck_reqs;
+  }
 };
 
 }  // namespace bustub

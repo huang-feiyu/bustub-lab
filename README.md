@@ -15,6 +15,12 @@ Isolation levels:
 * Read Committed: non-2PL, S locks are released immediately
 * Read Uncommitted: non-2PL, no S locks
 
+Abort Reason:
+* Deadlock
+* Lock on Shrinking
+* Shared Lock on Read Uncommitted
+* Upgrade Conflict
+
 ---
 
 <details>
@@ -29,8 +35,31 @@ Isolation levels:
 
 ## Task #1: Lock Manager
 
+**Before this task, read text Section 18.1 first.**
+
 The basic idea of a LM is that it maintains an internal data structure about the
 locks currently held by active transactions. Transactions then issue lock
 requests to the LM before they are allowed to access a data item. The LM will
 either grant the lock to the calling transaction, block that transaction, or
 abort it.
+
+Before **locking**, we first need to validate the arguments:
+1. Cannot lock when txn is *aborted*
+2. Cannot lock on *shrink phase*
+3. Cannot S lock on *Read Uncommitted*
+
+In `LockShared`, the normal stuff is:
+1. Check whether we already get the [S|X]-lock. If is, return ture;
+2. Otherwise, add the lock request to LockRequestQueue. (aka. blocking)
+3. If one of the lock is released, will notify every lock request in the queue.
+   One lock can be granted to txn if:<br/>
+   All previous requests do not acquire an **X-lock**
+4. When gets the lock, add to txn lock_set & update request internal data
+
+In `LockExclusive`, the normal stuff is:
+1. Check whether we already get the X-lock. If is, return ture;
+2. Otherwise, add the lock request to LockRequestQueue. (aka. blocking)
+3. If one of the lock is released, will notify every lock request in the queue.
+   One lock can be granted to txn if:<br/>
+   All previous requests do not acquire a[n] **[S|X] lock**
+4. When gets the lock, add to txn lock_set & update request internal data
