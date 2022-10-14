@@ -57,6 +57,7 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
   GetIterator(lck_reqs, txn_id)->granted_ = true;
   txn->GetSharedLockSet()->emplace(rid);
 
+  LOG_MINE("LockShared: txn[%d] got rid[%ld]", txn_id, rid.Get());
   return true;
 }
 
@@ -90,6 +91,7 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
   GetIterator(lck_reqs, txn_id)->granted_ = true;
   txn->GetExclusiveLockSet()->emplace(rid);
 
+  LOG_MINE("LockExclusive: txn[%d] got rid[%ld]", txn_id, rid.Get());
   return true;
 }
 
@@ -114,7 +116,8 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
   // If another transaction is already waiting to upgrade their lock
   if (lck_reqs->upgrading_ != INVALID_TXN_ID) {
     txn->SetState(TransactionState::ABORTED);
-    throw new TransactionAbortException(txn_id, AbortReason::UPGRADE_CONFLICT);
+    LOG_MINE("Upgrade Conflict");
+    throw TransactionAbortException(txn_id, AbortReason::UPGRADE_CONFLICT);
   }
   lck_reqs->upgrading_ = txn_id;
   // Update request to X-lock
@@ -134,6 +137,8 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
   lck_reqs->upgrading_ = INVALID_TXN_ID;
   txn->GetSharedLockSet()->erase(rid);
   txn->GetExclusiveLockSet()->emplace(rid);
+
+  LOG_MINE("LockUpgrade: txn[%d] got rid[%ld]", txn_id, rid.Get());
   return true;
 }
 
@@ -144,7 +149,8 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
   /* Validate arguments */
   if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED && txn->IsSharedLocked(rid)) {
     txn->SetState(TransactionState::ABORTED);
-    throw new TransactionAbortException(txn_id, AbortReason::UNLOCK_ON_SHRINKING);
+    LOG_MINE("Unlock on Shrinking");
+    throw TransactionAbortException(txn_id, AbortReason::UNLOCK_ON_SHRINKING);
   }
 
   // remove from request queue
@@ -154,7 +160,7 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
   if (txn->GetState() == TransactionState::GROWING) {
     if (txn->GetIsolationLevel() == IsolationLevel::REPEATABLE_READ) {
       txn->SetState(TransactionState::SHRINKING);
-    } else if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED && txn->IsExclusiveLocked(rid)) {
+    } else if (txn->IsExclusiveLocked(rid)) {
       txn->SetState(TransactionState::SHRINKING);
     }
   }
@@ -164,6 +170,7 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
   // Notify all waiting txns
   lck_reqs->cv_.notify_all();
 
+  LOG_MINE("Unlock: txn[%d] got rid[%ld]", txn_id, rid.Get());
   return true;
 }
 

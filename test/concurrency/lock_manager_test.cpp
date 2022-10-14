@@ -110,7 +110,7 @@ void TwoPLTest() {
     // Size shouldn't change here
     CheckTxnLockSize(txn, 0, 1);
   } catch (TransactionAbortException &e) {
-    // std::cout << e.GetInfo() << std::endl;
+    std::cout << e.GetInfo() << std::endl;
     CheckAborted(txn);
     // Size shouldn't change here
     CheckTxnLockSize(txn, 0, 1);
@@ -150,7 +150,7 @@ void UpgradeTest() {
   txn_mgr.Commit(&txn);
   CheckCommitted(&txn);
 }
-TEST(LockManagerTest, DISABLED_UpgradeLockTest) { UpgradeTest(); }
+TEST(LockManagerTest, UpgradeLockTest) { UpgradeTest(); }
 
 void WoundWaitBasicTest() {
   LockManager lock_mgr{};

@@ -149,13 +149,15 @@ class LockManager {
     // Cannot lock on *shrink phase*
     if (txn->GetState() == TransactionState::SHRINKING) {
       txn->SetState(TransactionState::ABORTED);
-      throw new TransactionAbortException(txn_id, AbortReason::LOCK_ON_SHRINKING);
+      LOG_MINE("Lock on Shrinking");
+      throw TransactionAbortException(txn_id, AbortReason::LOCK_ON_SHRINKING);
     }
 
     // Cannot acquire S-lock on *Read Uncommitted*
     if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED && mode == LockMode::SHARED) {
       txn->SetState(TransactionState::ABORTED);
-      throw new TransactionAbortException(txn_id, AbortReason::LOCKSHARED_ON_READ_UNCOMMITTED);
+      LOG_MINE("Lock on Read Uncommitted");
+      throw TransactionAbortException(txn_id, AbortReason::LOCKSHARED_ON_READ_UNCOMMITTED);
     }
 
     BUSTUB_ASSERT(txn->GetState() == TransactionState::GROWING, "Only grant lock when growing");
