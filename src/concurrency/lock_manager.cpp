@@ -26,8 +26,7 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
   }
 
   // Has gotten a lock before?
-  if (txn->GetExclusiveLockSet()->find(rid) != txn->GetExclusiveLockSet()->end() ||
-      txn->GetSharedLockSet()->find(rid) != txn->GetSharedLockSet()->end()) {
+  if (txn->IsExclusiveLocked(rid) || txn->IsSharedLocked(rid)) {
     return true;
   }
 
@@ -73,7 +72,7 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
   }
 
   // Has gotten X-lock before?
-  if (txn->GetExclusiveLockSet()->find(rid) != txn->GetExclusiveLockSet()->end()) {
+  if (txn->IsExclusiveLocked(rid)) {
     return true;
   }
 
@@ -109,10 +108,10 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
   }
 
   // There is S-lock request before
-  assert(txn->GetSharedLockSet()->find(rid) != txn->GetSharedLockSet()->end());
+  assert(txn->IsSharedLocked(rid));
 
   // Has gotten X-lock before?
-  if (txn->GetExclusiveLockSet()->find(rid) != txn->GetExclusiveLockSet()->end()) {
+  if (txn->IsExclusiveLocked(rid)) {
     return true;
   }
 
@@ -153,8 +152,34 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
 }
 
 bool LockManager::Unlock(Transaction *txn, const RID &rid) {
+  auto txn_id = txn->GetTransactionId();
+
+  /* Validate arguments */
+  if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED && txn->IsSharedLocked(rid)) {
+    txn->SetState(TransactionState::ABORTED);
+    throw new TransactionAbortException(txn_id, AbortReason::UNLOCK_ON_SHRINKING);
+  }
+
+  // remove from request queue
+  auto lck_reqs = std::move(lock_table_.find(rid)->second);
+  for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
+    if (itr->txn_id_ == txn_id) {
+      lck_reqs->request_queue_.erase(itr);
+    }
+  }
+  // Update txn state
+  if (txn->GetState() == TransactionState::GROWING) {
+    if (txn->GetIsolationLevel() == IsolationLevel::REPEATABLE_READ) {
+      txn->SetState(TransactionState::SHRINKING);
+    } else if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED && txn->IsExclusiveLocked(rid)) {
+      txn->SetState(TransactionState::SHRINKING);
+    }
+  }
   txn->GetSharedLockSet()->erase(rid);
   txn->GetExclusiveLockSet()->erase(rid);
+
+  lck_reqs->cv_.notify_all();
+
   return true;
 }
 

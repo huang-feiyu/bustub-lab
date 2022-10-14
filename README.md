@@ -18,7 +18,6 @@ Isolation levels:
 Abort Reason:
 * Deadlock
 * Lock on Shrinking
-* Unlock on growing
 * Shared Lock on Read Uncommitted
 * Upgrade Conflict
 
@@ -74,3 +73,9 @@ The normal stuff is:
    All previous requests do not acquire a[n] **[S|X] lock**
 4. When gets the lock, remove & add to txn lock_set and update request internal
    data
+
+In `Unlock`, the normal stuff is:
+1. Check whether hold the lock. If not, return false;
+2. Otherwise, remove request from queue
+3. Update txn state according to isolation level and remove from lock_set
+4. Notify all requests in the queue
