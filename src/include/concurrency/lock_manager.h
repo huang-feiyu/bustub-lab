@@ -70,8 +70,8 @@ class LockManager {
     std::condition_variable cv_;
     // txn_id of an upgrading transaction (if any)
     txn_id_t upgrading_ = INVALID_TXN_ID;
-    // for Queue R/W
-    ReaderWriterLatch RWlatch_;
+    // for cycle reading; writing is protected by latch_
+    std::mutex latch_;
   };
 
  public:
@@ -165,6 +165,7 @@ class LockManager {
 
   /** Insert into request queue */
   LockRequestQueue *InsertQueue(Transaction *txn, const RID &rid, LockMode mode) {
+    std::scoped_lock<std::mutex> guard{latch_};
     if (lock_table_.find(rid) == lock_table_.end()) {
       // First insert, init LockRequestQueue
       lock_table_.emplace(std::piecewise_construct, std::forward_as_tuple(rid), std::forward_as_tuple());
@@ -176,6 +177,27 @@ class LockManager {
     lck_reqs->request_queue_.emplace_back(lock_request);
 
     return lck_reqs;
+  }
+
+  /** Remove from request queue */
+  LockRequestQueue *RemoveQueue(Transaction *txn, const RID &rid) {
+    std::scoped_lock<std::mutex> guard{latch_};
+
+    // remove from request queue
+    auto lck_reqs = &lock_table_[rid];
+    lck_reqs->request_queue_.erase(GetIterator(lck_reqs, txn->GetTransactionId()));
+
+    return lck_reqs;
+  }
+
+  /** Get iterator by rid */
+  std::list<LockManager::LockRequest>::iterator GetIterator(LockRequestQueue *lck_reqs, txn_id_t txn_id) {
+    for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
+      if (itr->txn_id_ == txn_id) {
+        return itr;
+      }
+    }
+    return lck_reqs->request_queue_.end();
   }
 };
 

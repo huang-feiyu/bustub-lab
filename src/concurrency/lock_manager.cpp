@@ -47,18 +47,14 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
     return true;
   };
 
-  std::unique_lock cv_mutex{latch_};
+  std::mutex mutex;
+  std::unique_lock cv_mutex{mutex};
   while (!can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
   }
 
   // Wait done, grant the lock
-  for (auto &itr : lck_reqs->request_queue_) {
-    if (itr.txn_id_ == txn_id) {
-      BUSTUB_ASSERT(itr.lock_mode_ == LockMode::SHARED, "lock mode error");
-      itr.granted_ = true;
-    }
-  }
+  GetIterator(lck_reqs, txn_id)->granted_ = true;
   txn->GetSharedLockSet()->emplace(rid);
 
   return true;
@@ -84,18 +80,14 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
   // Can grant the txn?
   auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
 
-  std::unique_lock cv_mutex{latch_};
+  std::mutex mutex;
+  std::unique_lock cv_mutex{mutex};
   while (!can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
   }
 
   // Wait done, grant the lock
-  for (auto &itr : lck_reqs->request_queue_) {
-    if (itr.txn_id_ == txn_id) {
-      BUSTUB_ASSERT(itr.lock_mode_ == mode, "lock mode error");
-      itr.granted_ = true;
-    }
-  }
+  GetIterator(lck_reqs, txn_id)->granted_ = true;
   txn->GetExclusiveLockSet()->emplace(rid);
 
   return true;
@@ -126,28 +118,19 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
   }
   lck_reqs->upgrading_ = txn_id;
   // Update request to X-lock
-  for (auto &itr : lck_reqs->request_queue_) {
-    if (itr.txn_id_ == txn_id) {
-      itr.lock_mode_ = mode;
-    }
-    return false;  // no S-lock request before
-  }
+  GetIterator(lck_reqs, txn_id)->lock_mode_ = mode;
 
   // Can grant the txn?
   auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
 
-  std::unique_lock cv_mutex{latch_};
+  std::mutex mutex;
+  std::unique_lock cv_mutex{mutex};
   while (!can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
   }
 
   // Wait done, grant the lock
-  for (auto &itr : lck_reqs->request_queue_) {
-    if (itr.txn_id_ == txn_id) {
-      BUSTUB_ASSERT(itr.lock_mode_ == mode, "lock mode error");
-      itr.granted_ = true;
-    }
-  }
+  GetIterator(lck_reqs, txn_id)->granted_ = true;
   lck_reqs->upgrading_ = INVALID_TXN_ID;
   txn->GetSharedLockSet()->erase(rid);
   txn->GetExclusiveLockSet()->emplace(rid);
@@ -165,13 +148,8 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
   }
 
   // remove from request queue
-  auto lck_reqs = &lock_table_[rid];
-  for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
-    if (itr->txn_id_ == txn_id) {
-      lck_reqs->request_queue_.erase(itr);
-      break;
-    }
-  }
+  auto lck_reqs = RemoveQueue(txn, rid);
+
   // Update txn state
   if (txn->GetState() == TransactionState::GROWING) {
     if (txn->GetIsolationLevel() == IsolationLevel::REPEATABLE_READ) {
@@ -183,6 +161,7 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
   txn->GetSharedLockSet()->erase(rid);
   txn->GetExclusiveLockSet()->erase(rid);
 
+  // Notify all waiting txns
   lck_reqs->cv_.notify_all();
 
   return true;
