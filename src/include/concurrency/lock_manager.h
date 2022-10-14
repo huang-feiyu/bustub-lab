@@ -51,6 +51,8 @@ class LockManager {
     std::condition_variable cv_;
     // txn_id of an upgrading transaction (if any)
     txn_id_t upgrading_ = INVALID_TXN_ID;
+    // for condition variable
+    std::mutex latch_;
   };
 
  public:
@@ -105,10 +107,11 @@ class LockManager {
   bool Unlock(Transaction *txn, const RID &rid);
 
  private:
+  /** Internal latch for lock_table_. */
   std::mutex latch_;
 
   /** Lock table for lock requests. */
-  std::unordered_map<RID, LockRequestQueue> lock_table_;
+  std::unordered_map<RID, LockRequestQueue*> lock_table_;
 };
 
 }  // namespace bustub
