@@ -118,11 +118,10 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
 
   auto lck_reqs = std::move(lock_table_.find(rid)->second);
   // If another transaction is already waiting to upgrade their lock
-  if (lck_reqs->upgrading_ != txn_id) {
+  if (lck_reqs->upgrading_ != INVALID_TXN_ID) {
     txn->SetState(TransactionState::ABORTED);
     throw new TransactionAbortException(txn_id, AbortReason::UPGRADE_CONFLICT);
   }
-  assert(lck_reqs->upgrading_ != txn_id);  // cannot upgrade multiple times
   lck_reqs->upgrading_ = txn_id;
   // Update request to X-lock
   for (auto &itr : lck_reqs->request_queue_) {
@@ -147,6 +146,7 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
       itr.granted_ = true;
     }
   }
+  lck_reqs->upgrading_ = INVALID_TXN_ID;
   txn->GetSharedLockSet()->erase(rid);
   txn->GetExclusiveLockSet()->emplace(rid);
   return true;
