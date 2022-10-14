@@ -18,6 +18,7 @@ Isolation levels:
 Abort Reason:
 * Deadlock
 * Lock on Shrinking
+* Unlock on growing
 * Shared Lock on Read Uncommitted
 * Upgrade Conflict
 
@@ -63,3 +64,13 @@ In `LockExclusive`, the normal stuff is:
    One lock can be granted to txn if:<br/>
    All previous requests do not acquire a[n] **[S|X] lock**
 4. When gets the lock, add to txn lock_set & update request internal data
+
+In `LockUpgrade`, we need also validate the arguments first.
+The normal stuff is:
+1. Check whether we already get the X-lock. If is, return ture;
+2. Otherwise, update S-lock request to X-lock. (aka. blocking)
+3. If one of the lock is released, will notify every lock request in the queue.
+   One lock can be granted to txn if:<br/>
+   All previous requests do not acquire a[n] **[S|X] lock**
+4. When gets the lock, remove & add to txn lock_set and update request internal
+   data

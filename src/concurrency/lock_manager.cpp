@@ -101,7 +101,52 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
 }
 
 bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
-  // TODO(Huang):
+  auto mode = LockMode::EXCLUSIVE;
+  auto txn_id = txn->GetTransactionId();
+
+  if (!ValidateLocking(txn, mode)) {
+    return false;
+  }
+
+  // There is S-lock request before
+  assert(txn->GetSharedLockSet()->find(rid) != txn->GetSharedLockSet()->end());
+
+  // Has gotten X-lock before?
+  if (txn->GetExclusiveLockSet()->find(rid) != txn->GetExclusiveLockSet()->end()) {
+    return true;
+  }
+
+  auto lck_reqs = std::move(lock_table_.find(rid)->second);
+  // If another transaction is already waiting to upgrade their lock
+  if (lck_reqs->upgrading_ != txn_id) {
+    txn->SetState(TransactionState::ABORTED);
+    throw new TransactionAbortException(txn_id, AbortReason::UPGRADE_CONFLICT);
+  }
+  assert(lck_reqs->upgrading_ != txn_id);  // cannot upgrade multiple times
+  lck_reqs->upgrading_ = txn_id;
+  // Update request to X-lock
+  for (auto &itr : lck_reqs->request_queue_) {
+    if (itr.txn_id_ == txn_id) {
+      itr.lock_mode_ = mode;
+    }
+    return false;  // no S-lock request before
+  }
+
+  // Can grant the txn?
+  auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
+
+  std::unique_lock cv_mutex{lck_reqs->latch_};
+  while (!can_grant()) {
+    lck_reqs->cv_.wait(cv_mutex);
+  }
+
+  // Wait done, grant the lock
+  for (auto &itr : lck_reqs->request_queue_) {
+    if (itr.txn_id_ == txn_id) {
+      BUSTUB_ASSERT(itr.lock_mode_ == mode, "lock mode error");
+      itr.granted_ = true;
+    }
+  }
   txn->GetSharedLockSet()->erase(rid);
   txn->GetExclusiveLockSet()->emplace(rid);
   return true;
