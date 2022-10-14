@@ -18,6 +18,7 @@
 namespace bustub {
 
 bool LockManager::LockShared(Transaction *txn, const RID &rid) {
+  BIGLOCK();
   auto mode = LockMode::SHARED;
   auto txn_id = txn->GetTransactionId();
 
@@ -35,18 +36,14 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
 
   // Can grant the txn?
   auto can_grant = [&]() {
-    lck_reqs->RWlatch_.RLock();
     for (auto &req : lck_reqs->request_queue_) {
       if (req.txn_id_ == txn_id) {
-        lck_reqs->RWlatch_.RUnlock();
         return true;  // no previous (X-lock) requests
       }
       if (req.lock_mode_ == LockMode::EXCLUSIVE) {
-        lck_reqs->RWlatch_.RUnlock();
         return false;  // a previous requests needs X-lock
       }
     }
-    lck_reqs->RWlatch_.RUnlock();
     return true;
   };
 
@@ -68,6 +65,7 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
 }
 
 bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
+  BIGLOCK();
   auto mode = LockMode::EXCLUSIVE;
   auto txn_id = txn->GetTransactionId();
 
@@ -104,6 +102,7 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
 }
 
 bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
+  BIGLOCK();
   auto mode = LockMode::EXCLUSIVE;
   auto txn_id = txn->GetTransactionId();
 
@@ -156,6 +155,7 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
 }
 
 bool LockManager::Unlock(Transaction *txn, const RID &rid) {
+  BIGLOCK();
   auto txn_id = txn->GetTransactionId();
 
   /* Validate arguments */
@@ -166,11 +166,9 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
 
   // remove from request queue
   auto lck_reqs = &lock_table_[rid];
-  lck_reqs->RWlatch_.WLock();
   for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
     if (itr->txn_id_ == txn_id) {
       lck_reqs->request_queue_.erase(itr);
-      lck_reqs->RWlatch_.WUnlock();
       break;
     }
   }

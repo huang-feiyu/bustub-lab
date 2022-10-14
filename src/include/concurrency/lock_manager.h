@@ -25,7 +25,15 @@
 #include "common/rid.h"
 #include "concurrency/transaction.h"
 
+// #define LOCK
 #define DEBUG
+
+#ifdef LOCK
+#define BIGLOCK() \
+  std::scoped_lock<std::mutex> guard { big_latch_ }
+#else
+#define BIGLOCK() ((void)0)
+#endif
 
 #ifdef DEBUG
 #define LOG_MINE(...)                      \
@@ -48,11 +56,11 @@ class LockManager {
 
   class LockRequest {
    public:
-    LockRequest(txn_id_t txn_id, LockMode lock_mode) : txn_id_(txn_id), lock_mode_(lock_mode), granted_(false) {}
+    LockRequest(txn_id_t txn_id, LockMode lock_mode) : txn_id_(txn_id), lock_mode_(lock_mode) {}
 
     txn_id_t txn_id_;
     LockMode lock_mode_;
-    bool granted_;
+    bool granted_{false};
   };
 
   class LockRequestQueue {
@@ -118,6 +126,8 @@ class LockManager {
   bool Unlock(Transaction *txn, const RID &rid);
 
  private:
+  std::mutex big_latch_;
+
   /** Internal latch for lock_table_. */
   std::mutex latch_;
 
@@ -162,10 +172,8 @@ class LockManager {
 
     // Insert into queue
     auto lck_reqs = &lock_table_[rid];
-    lck_reqs->RWlatch_.WLock();
     LockRequest lock_request{txn->GetTransactionId(), mode};
     lck_reqs->request_queue_.emplace_back(lock_request);
-    lck_reqs->RWlatch_.WUnlock();
 
     return lck_reqs;
   }
