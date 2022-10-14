@@ -25,6 +25,17 @@
 #include "common/rid.h"
 #include "concurrency/transaction.h"
 
+#define DEBUG
+
+#ifdef DEBUG
+#define LOG_MINE(...)                      \
+  fprintf(LOG_OUTPUT_STREAM, __VA_ARGS__); \
+  fprintf(LOG_OUTPUT_STREAM, "\n");        \
+  ::fflush(stdout)
+#else
+#define LOG_INFO(...) ((void)0)
+#endif
+
 namespace bustub {
 
 class TransactionManager;
@@ -51,8 +62,8 @@ class LockManager {
     std::condition_variable cv_;
     // txn_id of an upgrading transaction (if any)
     txn_id_t upgrading_ = INVALID_TXN_ID;
-    // for condition variable
-    std::mutex latch_;
+    // for Queue R/W
+    ReaderWriterLatch RWlatch_;
   };
 
  public:
@@ -111,7 +122,7 @@ class LockManager {
   std::mutex latch_;
 
   /** Lock table for lock requests. */
-  std::unordered_map<RID, std::unique_ptr<LockRequestQueue>> lock_table_;
+  std::unordered_map<RID, LockRequestQueue> lock_table_;
 
   /*===--- Helper Functions ---===*/
 
@@ -143,19 +154,18 @@ class LockManager {
   }
 
   /** Insert into request queue */
-  std::unique_ptr<LockRequestQueue> InsertQueue(Transaction *txn, const RID &rid, LockMode mode) {
+  LockRequestQueue *InsertQueue(Transaction *txn, const RID &rid, LockMode mode) {
     if (lock_table_.find(rid) == lock_table_.end()) {
       // First insert, init LockRequestQueue
-      latch_.lock();
-      lock_table_.emplace(std::make_pair(rid, std::make_unique<LockRequestQueue>()));
-      latch_.unlock();
+      lock_table_.emplace(std::piecewise_construct, std::forward_as_tuple(rid), std::forward_as_tuple());
     }
 
     // Insert into queue
-    auto lck_reqs = std::move(lock_table_.at(rid));
-    std::unique_lock u_lock{lck_reqs->latch_};
+    auto lck_reqs = &lock_table_[rid];
+    lck_reqs->RWlatch_.WLock();
     LockRequest lock_request{txn->GetTransactionId(), mode};
     lck_reqs->request_queue_.emplace_back(lock_request);
+    lck_reqs->RWlatch_.WUnlock();
 
     return lck_reqs;
   }
