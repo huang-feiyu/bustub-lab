@@ -28,6 +28,7 @@
 * [Note18](./Notes/Note18.md): Timestamp Ordering Concurrency Control
 * [Note19](./Notes/Note19.md): Multi-Version Concurrency Control
 * [Note20](./Notes/Note20.md): Database Logging
+* [Note21](./Notes/Note21.md): Database Recovery
 
 ## Homework
 
