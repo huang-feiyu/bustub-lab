@@ -107,3 +107,12 @@ check whether the txn is aborted when it is notified.
 * Delete
   * Add X-lock immediately (grant, upgrade)
   * Add to txn [index|] write set
+
+---
+
+```
+Time:   23 Hours
+Score:  100/100
+Author: Ludwig Huang
+Date:   2022-10-15
+```
