@@ -52,13 +52,12 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   // NOTE: need to validate values schema
   assert(i_tuple != nullptr);
   inserted = table_info_->table_->InsertTuple(*i_tuple, rid, exec_ctx_->GetTransaction());
+  lck_mgr->LockExclusive(txn, *rid);
 
   // if inserted, need to insert into indexes
   if (inserted && !index_infos_.empty()) {
-    lck_mgr->LockExclusive(txn, *rid);
     auto w_record = TableWriteRecord(*rid, WType::INSERT, *i_tuple, table_info_->table_.get());
     txn->GetWriteSet()->emplace_back(w_record);
-
     for (auto index : index_infos_) {
       auto key = i_tuple->KeyFromTuple(table_info_->schema_, index->key_schema_, index->index_->GetKeyAttrs());
       index->index_->InsertEntry(key, *rid, exec_ctx_->GetTransaction());

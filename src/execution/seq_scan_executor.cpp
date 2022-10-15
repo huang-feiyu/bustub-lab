@@ -48,14 +48,14 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
 
       // Read Committed: release S-lock immediately
       if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
-        lck_mgr->Unlock(txn, cur_->GetRid());
+        lck_mgr->Unlock(txn, item->GetRid());
       }
       return true;
     }
 
     // no S-lock in Read Uncommitted
     if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
-      lck_mgr->Unlock(txn, cur_->GetRid());
+      lck_mgr->Unlock(txn, item->GetRid());
     }
   }
   return false;  // end of iteration
