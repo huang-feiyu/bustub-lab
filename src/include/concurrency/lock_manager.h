@@ -206,6 +206,7 @@ class LockManager {
   /** Wait in queue */
   void WaitInQueue(Transaction *txn, LockRequestQueue *lck_reqs, LockMode mode) {
     auto txn_id = txn->GetTransactionId();
+    std::unique_lock cv_mutex{lck_reqs->latch_};
     if (mode == LockMode::SHARED) {
       auto can_grant = [&]() {
         for (auto &req : lck_reqs->request_queue_) {
@@ -218,8 +219,6 @@ class LockManager {
         }
         return true;  // empty queue
       };
-      std::mutex mutex;
-      std::unique_lock cv_mutex{mutex};
       while (!can_grant()) {
         lck_reqs->cv_.wait(cv_mutex);
         if (txn->GetState() == TransactionState::ABORTED) {
@@ -229,8 +228,6 @@ class LockManager {
       }
     } else {
       auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
-      std::mutex mutex;
-      std::unique_lock cv_mutex{mutex};
       while (!can_grant()) {
         lck_reqs->cv_.wait(cv_mutex);
         if (txn->GetState() == TransactionState::ABORTED) {

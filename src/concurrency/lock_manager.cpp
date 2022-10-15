@@ -35,13 +35,13 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
 
   // Insert into queue
   auto lck_reqs = InsertQueue(txn, rid, mode);
+  txn->GetSharedLockSet()->emplace(rid);
 
   // Wait in Queue
   WaitInQueue(txn, lck_reqs, mode);
 
   // Wait done, grant the lock
   GetIterator(lck_reqs, txn_id)->granted_ = true;
-  txn->GetSharedLockSet()->emplace(rid);
 
   LOG_MINE("LockShared: txn[%d] got rid[%ld]", txn_id, rid.Get());
   return true;
@@ -63,13 +63,13 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
 
   // Insert into queue
   auto lck_reqs = InsertQueue(txn, rid, mode);
+  txn->GetExclusiveLockSet()->emplace(rid);
 
   // Wait in Queue
   WaitInQueue(txn, lck_reqs, mode);
 
   // Wait done, grant the lock
   GetIterator(lck_reqs, txn_id)->granted_ = true;
-  txn->GetExclusiveLockSet()->emplace(rid);
 
   LOG_MINE("LockExclusive: txn[%d] got rid[%ld]", txn_id, rid.Get());
   return true;
@@ -101,9 +101,11 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
   }
   lck_reqs->upgrading_ = txn_id;
 
-  KillYoung(lck_reqs, txn_id, mode);
   // Upgrade request to X-lock
-  GetIterator(lck_reqs, txn_id)->lock_mode_ = mode;
+  RemoveQueue(txn, rid);
+  InsertQueue(txn, rid, mode);
+  txn->GetSharedLockSet()->erase(rid);
+  txn->GetExclusiveLockSet()->emplace(rid);
 
   // Wait in Queue
   WaitInQueue(txn, lck_reqs, mode);
@@ -111,8 +113,6 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
   // Wait done, grant the lock
   GetIterator(lck_reqs, txn_id)->granted_ = true;
   lck_reqs->upgrading_ = INVALID_TXN_ID;
-  txn->GetSharedLockSet()->erase(rid);
-  txn->GetExclusiveLockSet()->emplace(rid);
 
   LOG_MINE("LockUpgrade: txn[%d] got rid[%ld]", txn_id, rid.Get());
   return true;
