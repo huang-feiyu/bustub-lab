@@ -26,7 +26,7 @@
 #include "concurrency/transaction.h"
 
 // #define LOCK
-// #define DEBUG
+#define DEBUG
 
 #ifdef LOCK
 #define BIGLOCK() \
@@ -134,19 +134,11 @@ class LockManager {
   /** Lock table for lock requests. */
   std::unordered_map<RID, LockRequestQueue> lock_table_;
 
-  /** Hash map for txn_id and txn. */
-  std::unordered_map<txn_id_t, Transaction *> txn_map_;
-
   /*===--- Helper Functions ---===*/
 
   /** Validate arguments when locking */
   bool ValidateLocking(Transaction *txn, LockMode mode) {
     auto txn_id = txn->GetTransactionId();
-
-    // Add to txn_map for Wound-Wait finding txn
-    if (txn_map_.count(txn_id) == 0) {
-      txn_map_[txn_id] = txn;
-    }
 
     // Cannot lock when txn is *aborted*
     if (txn->GetState() == TransactionState::ABORTED) {
@@ -157,14 +149,14 @@ class LockManager {
     // Cannot lock on *shrink phase*
     if (txn->GetState() == TransactionState::SHRINKING) {
       txn->SetState(TransactionState::ABORTED);
-      LOG_MINE("Lock on Shrinking");
+      LOG_MINE("ABORTED: Lock on Shrinking");
       throw TransactionAbortException(txn_id, AbortReason::LOCK_ON_SHRINKING);
     }
 
     // Cannot acquire S-lock on *Read Uncommitted*
     if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED && mode == LockMode::SHARED) {
       txn->SetState(TransactionState::ABORTED);
-      LOG_MINE("Lock on Read Uncommitted");
+      LOG_MINE("ABORTED: Lock on Read Uncommitted");
       throw TransactionAbortException(txn_id, AbortReason::LOCKSHARED_ON_READ_UNCOMMITTED);
     }
 
@@ -183,6 +175,7 @@ class LockManager {
 
     // Insert into queue
     auto lck_reqs = &lock_table_[rid];
+    KillYoung(lck_reqs, txn->GetTransactionId(), mode);
     LockRequest lock_request{txn->GetTransactionId(), mode};
     lck_reqs->request_queue_.emplace_back(lock_request);
 
@@ -210,25 +203,46 @@ class LockManager {
     return lck_reqs->request_queue_.end();
   }
 
-  /** Kill all low priorty txns. Higher txn_id => Lower priorty */
-  void KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode) {
-    auto aborted = false;
-    for (auto &itr : lck_reqs->request_queue_) {
-      auto id = itr.txn_id_;
-      if (id == txn_id) {
-        break;  // kill all young txns **before** requesting
+  /** Wait in queue */
+  void WaitInQueue(Transaction *txn, LockRequestQueue *lck_reqs, LockMode mode) {
+    auto txn_id = txn->GetTransactionId();
+    if (mode == LockMode::SHARED) {
+      auto can_grant = [&]() {
+        for (auto &req : lck_reqs->request_queue_) {
+          if (req.txn_id_ == txn_id) {
+            return true;  // no previous (X-lock) requests
+          }
+          if (req.lock_mode_ == LockMode::EXCLUSIVE) {
+            return false;  // a previous requests needs X-lock
+          }
+        }
+        return true;  // empty queue
+      };
+      std::mutex mutex;
+      std::unique_lock cv_mutex{mutex};
+      while (!can_grant()) {
+        lck_reqs->cv_.wait(cv_mutex);
+        if (txn->GetState() == TransactionState::ABORTED) {
+          LOG_MINE("ABORTED: Deadlock");
+          throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
+        }
       }
-      if (id > txn_id) {
-        if (mode == LockMode::EXCLUSIVE || itr.lock_mode_ == LockMode::EXCLUSIVE) {
-          txn_map_[id]->SetState(TransactionState::ABORTED);
-          aborted = true;
+    } else {
+      auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
+      std::mutex mutex;
+      std::unique_lock cv_mutex{mutex};
+      while (!can_grant()) {
+        lck_reqs->cv_.wait(cv_mutex);
+        if (txn->GetState() == TransactionState::ABORTED) {
+          LOG_MINE("ABORTED: Deadlock");
+          throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
         }
       }
     }
-    if (aborted) {
-      lck_reqs->cv_.notify_all();
-    }
   }
+
+  /** Kill all low priorty txns. */
+  void KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode);
 };
 
 }  // namespace bustub

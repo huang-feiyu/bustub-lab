@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include "concurrency/transaction_manager.h"
+
 namespace bustub {
 
 bool LockManager::LockShared(Transaction *txn, const RID &rid) {
@@ -33,30 +35,9 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
 
   // Insert into queue
   auto lck_reqs = InsertQueue(txn, rid, mode);
-  KillYoung(lck_reqs, txn_id, mode);
 
-  // Can grant the txn?
-  auto can_grant = [&]() {
-    for (auto &req : lck_reqs->request_queue_) {
-      if (req.txn_id_ == txn_id) {
-        return true;  // no previous (X-lock) requests
-      }
-      if (req.lock_mode_ == LockMode::EXCLUSIVE) {
-        return false;  // a previous requests needs X-lock
-      }
-    }
-    return true;
-  };
-
-  std::mutex mutex;
-  std::unique_lock cv_mutex{mutex};
-  while (txn->GetState() != TransactionState::ABORTED && !can_grant()) {
-    lck_reqs->cv_.wait(cv_mutex);
-  }
-  if (txn->GetState() == TransactionState::ABORTED) {
-    LOG_MINE("Deadlock");
-    throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
-  }
+  // Wait in Queue
+  WaitInQueue(txn, lck_reqs, mode);
 
   // Wait done, grant the lock
   GetIterator(lck_reqs, txn_id)->granted_ = true;
@@ -82,20 +63,9 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
 
   // Insert into queue
   auto lck_reqs = InsertQueue(txn, rid, mode);
-  KillYoung(lck_reqs, txn_id, mode);
 
-  // Can grant the txn?
-  auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
-
-  std::mutex mutex;
-  std::unique_lock cv_mutex{mutex};
-  while (txn->GetState() != TransactionState::ABORTED && !can_grant()) {
-    lck_reqs->cv_.wait(cv_mutex);
-  }
-  if (txn->GetState() == TransactionState::ABORTED) {
-    LOG_MINE("Deadlock");
-    throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
-  }
+  // Wait in Queue
+  WaitInQueue(txn, lck_reqs, mode);
 
   // Wait done, grant the lock
   GetIterator(lck_reqs, txn_id)->granted_ = true;
@@ -114,38 +84,29 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
     return false;
   }
 
-  // There is S-lock request before
-  assert(txn->IsSharedLocked(rid));
-
   // Has gotten X-lock before?
   if (txn->IsExclusiveLocked(rid)) {
     return true;
   }
 
+  // There is S-lock request before
+  assert(txn->IsSharedLocked(rid));
+
   auto lck_reqs = &lock_table_[rid];
   // If another transaction is already waiting to upgrade their lock
   if (lck_reqs->upgrading_ != INVALID_TXN_ID) {
     txn->SetState(TransactionState::ABORTED);
-    LOG_MINE("Upgrade Conflict");
+    LOG_MINE("ABORTED: Upgrade Conflict");
     throw TransactionAbortException(txn_id, AbortReason::UPGRADE_CONFLICT);
   }
   lck_reqs->upgrading_ = txn_id;
-  // Update request to X-lock
-  GetIterator(lck_reqs, txn_id)->lock_mode_ = mode;
+
   KillYoung(lck_reqs, txn_id, mode);
+  // Upgrade request to X-lock
+  GetIterator(lck_reqs, txn_id)->lock_mode_ = mode;
 
-  // Can grant the txn?
-  auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
-
-  std::mutex mutex;
-  std::unique_lock cv_mutex{mutex};
-  while (txn->GetState() != TransactionState::ABORTED && !can_grant()) {
-    lck_reqs->cv_.wait(cv_mutex);
-  }
-  if (txn->GetState() == TransactionState::ABORTED) {
-    LOG_MINE("Deadlock");
-    throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
-  }
+  // Wait in Queue
+  WaitInQueue(txn, lck_reqs, mode);
 
   // Wait done, grant the lock
   GetIterator(lck_reqs, txn_id)->granted_ = true;
@@ -164,7 +125,7 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
   /* Validate arguments */
   if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED && txn->IsSharedLocked(rid)) {
     txn->SetState(TransactionState::ABORTED);
-    LOG_MINE("Unlock on Shrinking");
+    LOG_MINE("ABORTED: Unlock on Shrinking");
     throw TransactionAbortException(txn_id, AbortReason::UNLOCK_ON_SHRINKING);
   }
 
@@ -187,6 +148,20 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
 
   LOG_MINE("Unlock: txn[%d] got rid[%ld]", txn_id, rid.Get());
   return true;
+}
+
+void LockManager::KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode) {
+  for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
+    auto id = itr->txn_id_;  // NOLINT
+    // Higher txn_id => Lower priorty
+    if (id > txn_id && TransactionManager::GetTransaction(id)->GetState() != TransactionState::ABORTED) {
+      if (mode == LockMode::EXCLUSIVE || itr->lock_mode_ == LockMode::EXCLUSIVE) {
+        itr->granted_ = false;
+        TransactionManager::GetTransaction(id)->SetState(TransactionState::ABORTED);
+        lck_reqs->cv_.notify_all();
+      }
+    }
+  }
 }
 
 }  // namespace bustub
