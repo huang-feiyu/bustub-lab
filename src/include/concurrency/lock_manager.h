@@ -26,7 +26,7 @@
 #include "concurrency/transaction.h"
 
 // #define LOCK
-#define DEBUG
+// #define DEBUG
 
 #ifdef LOCK
 #define BIGLOCK() \
@@ -218,7 +218,7 @@ class LockManager {
         break;  // kill all young txns **before** requesting
       }
       if (id > txn_id) {
-        if (mode == LockMode::EXCLUSIVE || GetIterator(lck_reqs, id)->lock_mode_ == LockMode::SHARED) {
+        if (mode == LockMode::EXCLUSIVE || itr->lock_mode_ == LockMode::EXCLUSIVE) {
           txn_map_[id]->SetState(TransactionState::ABORTED);
         }
       }

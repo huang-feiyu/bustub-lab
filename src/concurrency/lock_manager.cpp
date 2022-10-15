@@ -50,7 +50,7 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
 
   std::mutex mutex;
   std::unique_lock cv_mutex{mutex};
-  while (txn->GetState() != TransactionState::ABORTED || !can_grant()) {
+  while (txn->GetState() != TransactionState::ABORTED && !can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
   }
   if (txn->GetState() == TransactionState::ABORTED) {
@@ -89,7 +89,7 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
 
   std::mutex mutex;
   std::unique_lock cv_mutex{mutex};
-  while (txn->GetState() != TransactionState::ABORTED || !can_grant()) {
+  while (txn->GetState() != TransactionState::ABORTED && !can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
   }
   if (txn->GetState() == TransactionState::ABORTED) {
@@ -139,7 +139,7 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
 
   std::mutex mutex;
   std::unique_lock cv_mutex{mutex};
-  while (txn->GetState() != TransactionState::ABORTED || !can_grant()) {
+  while (txn->GetState() != TransactionState::ABORTED && !can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
   }
   if (txn->GetState() == TransactionState::ABORTED) {
