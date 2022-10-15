@@ -213,13 +213,13 @@ class LockManager {
   /** Kill all low priorty txns. Higher txn_id => Lower priorty */
   void KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode) {
     auto aborted = false;
-    for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
-      auto id = itr->txn_id_;
+    for (auto &itr : lck_reqs->request_queue_) {
+      auto id = itr.txn_id_;
       if (id == txn_id) {
         break;  // kill all young txns **before** requesting
       }
       if (id > txn_id) {
-        if (mode == LockMode::EXCLUSIVE || itr->lock_mode_ == LockMode::EXCLUSIVE) {
+        if (mode == LockMode::EXCLUSIVE || itr.lock_mode_ == LockMode::EXCLUSIVE) {
           txn_map_[id]->SetState(TransactionState::ABORTED);
           aborted = true;
         }
