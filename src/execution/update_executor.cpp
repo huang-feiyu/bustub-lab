@@ -37,11 +37,7 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     return false;
   }
 
-  if (txn->IsSharedLocked(*rid)) {
-    lck_mgr->LockUpgrade(txn, *rid);
-  } else {
-    lck_mgr->LockExclusive(txn, *rid);
-  }
+  lck_mgr->LockUpgrade(txn, *rid);
 
   auto u_tuple = GenerateUpdatedTuple(old_tuple);
   updated = table_info_->table_->UpdateTuple(u_tuple, *rid, exec_ctx_->GetTransaction());
