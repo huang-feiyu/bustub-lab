@@ -62,7 +62,7 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
     }
 
     // no S-lock in Read Uncommitted
-    if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+    if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
       try {
         lck_mgr->Unlock(txn, item->GetRid());
       } catch (TransactionAbortException &e) {
