@@ -90,5 +90,5 @@ Wound-Wait ("Young Waits for Old")
 In our case, it seems like *txn_id* determines the priorty of a txn.
 Bigger *txn_id* => Younger txn => Lower priorty
 
-What we need to do is: add a *KillYoung* before every locking operation.
-
+What we need to do is: add a *KillYoung* before every locking operation and
+check whether the txn is aborted when it is notified.
