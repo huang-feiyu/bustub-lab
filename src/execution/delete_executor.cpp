@@ -37,7 +37,15 @@ bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     return false;
   }
 
-  lck_mgr->LockUpgrade(txn, *rid);
+  try {
+    if (txn->IsSharedLocked(*rid)) {
+      lck_mgr->LockUpgrade(txn, *rid);
+    } else {
+      lck_mgr->LockExclusive(txn, *rid);
+    }
+  } catch (TransactionAbortException &e) {
+    return false;
+  }
 
   deleted = table_info_->table_->MarkDelete(*rid, exec_ctx_->GetTransaction());
 

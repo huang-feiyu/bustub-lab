@@ -32,7 +32,11 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   while (cur_ != end_) {
     // no S-lock in Read Uncommitted
     if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
-      lck_mgr->LockShared(txn, cur_->GetRid());
+      try {
+        lck_mgr->LockShared(txn, cur_->GetRid());
+      } catch (TransactionAbortException &e) {
+        return false;
+      }
     }
 
     auto item = cur_++;
@@ -48,14 +52,22 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
 
       // Read Committed: release S-lock immediately
       if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
-        lck_mgr->Unlock(txn, item->GetRid());
+        try {
+          lck_mgr->Unlock(txn, item->GetRid());
+        } catch (TransactionAbortException &e) {
+          return false;
+        }
       }
       return true;
     }
 
     // no S-lock in Read Uncommitted
     if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
-      lck_mgr->Unlock(txn, item->GetRid());
+      try {
+        lck_mgr->Unlock(txn, item->GetRid());
+      } catch (TransactionAbortException &e) {
+        return false;
+      }
     }
   }
   return false;  // end of iteration

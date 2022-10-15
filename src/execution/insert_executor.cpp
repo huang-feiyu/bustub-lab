@@ -52,7 +52,11 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   // NOTE: need to validate values schema
   assert(i_tuple != nullptr);
   inserted = table_info_->table_->InsertTuple(*i_tuple, rid, exec_ctx_->GetTransaction());
-  lck_mgr->LockExclusive(txn, *rid);
+  try {
+    lck_mgr->LockExclusive(txn, *rid);
+  } catch (TransactionAbortException &e) {
+    return false;
+  }
 
   // if inserted, need to insert into indexes
   if (inserted && !index_infos_.empty()) {
