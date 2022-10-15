@@ -175,7 +175,7 @@ class LockManager {
 
     // Insert into queue
     auto lck_reqs = &lock_table_[rid];
-    KillYoung(lck_reqs, txn->GetTransactionId(), mode);
+    KillYoung(lck_reqs, txn->GetTransactionId(), mode, rid);
     LockRequest lock_request{txn->GetTransactionId(), mode};
     lck_reqs->request_queue_.emplace_back(lock_request);
 
@@ -241,7 +241,7 @@ class LockManager {
   }
 
   /** Kill all low priorty txns. */
-  void KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode);
+  void KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode, const RID &rid);
 };
 
 }  // namespace bustub

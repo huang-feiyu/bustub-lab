@@ -150,19 +150,25 @@ bool LockManager::Unlock(Transaction *txn, const RID &rid) {
   return true;
 }
 
-void LockManager::KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode) {
-  for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
+void LockManager::KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode, const RID &rid) {
+retry:
+  auto itr = lck_reqs->request_queue_.begin();
+  while (itr != lck_reqs->request_queue_.end()) {
     auto id = itr->txn_id_;  // NOLINT
+    auto txn = TransactionManager::GetTransaction(id);
     // Higher txn_id => Lower priorty
-    if (id > txn_id && TransactionManager::GetTransaction(id)->GetState() != TransactionState::ABORTED) {
+    if (id > txn_id && txn->GetState() != TransactionState::ABORTED) {
       if (mode == LockMode::EXCLUSIVE || itr->lock_mode_ == LockMode::EXCLUSIVE) {
         LOG_MINE("KillYoung: [%d] > %d, [%d] die", id, txn_id, id);
-        itr->granted_ = false;
-        TransactionManager::GetTransaction(id)->SetState(TransactionState::ABORTED);
+        txn->GetExclusiveLockSet()->erase(rid);
+        txn->GetExclusiveLockSet()->erase(rid);
+        txn->SetState(TransactionState::ABORTED);
+        lck_reqs->request_queue_.erase(itr);
         lck_reqs->cv_.notify_all();
-        // lck_reqs->request_queue_.erase(itr);
+        goto retry;  // avoid invalid iterator
       }
     }
+    itr++;
   }
 }
 
