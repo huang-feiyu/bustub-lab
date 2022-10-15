@@ -156,9 +156,11 @@ void LockManager::KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMod
     // Higher txn_id => Lower priorty
     if (id > txn_id && TransactionManager::GetTransaction(id)->GetState() != TransactionState::ABORTED) {
       if (mode == LockMode::EXCLUSIVE || itr->lock_mode_ == LockMode::EXCLUSIVE) {
+        LOG_MINE("KillYoung: [%d] > %d, [%d] die", id, txn_id, id);
         itr->granted_ = false;
         TransactionManager::GetTransaction(id)->SetState(TransactionState::ABORTED);
         lck_reqs->cv_.notify_all();
+        // lck_reqs->request_queue_.erase(itr);
       }
     }
   }

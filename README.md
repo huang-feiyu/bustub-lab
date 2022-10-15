@@ -80,7 +80,7 @@ In `Unlock`, the normal stuff is:
 3. Update txn state according to isolation level and remove from lock_set
 4. Notify all requests in the queue
 
-## Taksk #2: Deadlock Prevention
+## Task #2: Deadlock Prevention
 
 Wound-Wait ("Young Waits for Old")
 * If requesting txn has higher priority (Older Timestamp) than holding txn,

@@ -30,7 +30,7 @@
 
 #ifdef LOCK
 #define BIGLOCK() \
-  std::scoped_lock<std::mutex> guard { big_latch_ }
+  std::unique_lock<std::mutex> guard { big_latch_ }
 #else
 #define BIGLOCK() ((void)0)
 #endif
@@ -184,8 +184,6 @@ class LockManager {
 
   /** Remove from request queue */
   LockRequestQueue *RemoveQueue(Transaction *txn, const RID &rid) {
-    std::scoped_lock<std::mutex> guard{latch_};
-
     // remove from request queue
     auto lck_reqs = &lock_table_[rid];
     lck_reqs->request_queue_.erase(GetIterator(lck_reqs, txn->GetTransactionId()));
@@ -195,6 +193,8 @@ class LockManager {
 
   /** Get iterator by rid */
   std::list<LockManager::LockRequest>::iterator GetIterator(LockRequestQueue *lck_reqs, txn_id_t txn_id) {
+    std::scoped_lock<std::mutex> guard{latch_};
+
     for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
       if (itr->txn_id_ == txn_id) {
         return itr;
@@ -206,7 +206,7 @@ class LockManager {
   /** Wait in queue */
   void WaitInQueue(Transaction *txn, LockRequestQueue *lck_reqs, LockMode mode) {
     auto txn_id = txn->GetTransactionId();
-    std::unique_lock cv_mutex{lck_reqs->latch_};
+    std::unique_lock cv_mutex{latch_};
     if (mode == LockMode::SHARED) {
       auto can_grant = [&]() {
         for (auto &req : lck_reqs->request_queue_) {
@@ -225,6 +225,7 @@ class LockManager {
           LOG_MINE("ABORTED: Deadlock");
           throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
         }
+        LOG_MINE("WaitInQueue: [%d] Wake up", txn_id);
       }
     } else {
       auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
@@ -234,6 +235,7 @@ class LockManager {
           LOG_MINE("ABORTED: Deadlock");
           throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
         }
+        LOG_MINE("WaitInQueue: [%d] Wake up", txn_id);
       }
     }
   }
