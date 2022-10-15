@@ -28,6 +28,9 @@ void DeleteExecutor::Init() {
 }
 
 bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  auto txn = exec_ctx_->GetTransaction();
+  auto lck_mgr = exec_ctx_->GetLockManager();
+
   Tuple d_tuple;
   auto deleted = false;
   if (!child_executor_->Next(&d_tuple, rid)) {
@@ -35,12 +38,24 @@ bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   }
 
   deleted = table_info_->table_->MarkDelete(*rid, exec_ctx_->GetTransaction());
+  if (txn->IsSharedLocked(*rid)) {
+    lck_mgr->LockUpgrade(txn, *rid);
+  } else {
+    lck_mgr->LockExclusive(txn, *rid);
+  }
 
-  // if updated, need to insert into indexes
+  // if deleted, need to insert into indexes
   if (deleted && !index_infos_.empty()) {
+    auto w_record = TableWriteRecord(*rid, WType::DELETE, d_tuple, table_info_->table_.get());
+    txn->GetWriteSet()->emplace_back(w_record);
+
     for (auto index : index_infos_) {
       auto key = d_tuple.KeyFromTuple(table_info_->schema_, index->key_schema_, index->index_->GetKeyAttrs());
       index->index_->DeleteEntry(key, *rid, exec_ctx_->GetTransaction());
+
+      auto wi_record =
+          IndexWriteRecord(*rid, table_info_->oid_, WType::DELETE, d_tuple, index->index_oid_, exec_ctx_->GetCatalog());
+      txn->GetIndexWriteSet()->emplace_back(wi_record);
     }
   }
 

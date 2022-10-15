@@ -26,7 +26,15 @@ void SeqScanExecutor::Init() {
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
+  auto txn = exec_ctx_->GetTransaction();
+  auto lck_mgr = exec_ctx_->GetLockManager();
+
   while (cur_ != end_) {
+    // no S-lock in Read Uncommitted
+    if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+      lck_mgr->LockShared(txn, cur_->GetRid());
+    }
+
     auto item = cur_++;
     assert(item->IsAllocated());
     auto pred = plan_->GetPredicate();
@@ -37,7 +45,17 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
       }
       *tuple = Tuple(vals, GetOutputSchema());
       *rid = item->GetRid();
+
+      // Read Committed: release S-lock immediately
+      if (txn->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
+        lck_mgr->Unlock(txn, cur_->GetRid());
+      }
       return true;
+    }
+
+    // no S-lock in Read Uncommitted
+    if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+      lck_mgr->Unlock(txn, cur_->GetRid());
     }
   }
   return false;  // end of iteration

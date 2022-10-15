@@ -92,3 +92,18 @@ Bigger *txn_id* => Younger txn => Lower priorty
 
 What we need to do is: add a *KillYoung* before every locking operation and
 check whether the txn is aborted when it is notified.
+
+## Task #3: Concurrent Query Execution
+
+* Sequential Scan
+  * Add S-lock to each tuple while accessing
+    (Depends on its isolation level)
+* Insert
+  * Add X-lock after inserting
+  * Add to txn [index|] write set
+* Update
+  * Add X-lock immediately (grant, upgrade)
+  * Add to txn [index|] write set
+* Delete
+  * Add X-lock immediately (grant, upgrade)
+  * Add to txn [index|] write set

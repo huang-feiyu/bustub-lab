@@ -27,6 +27,9 @@ void UpdateExecutor::Init() {
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  auto txn = exec_ctx_->GetTransaction();
+  auto lck_mgr = exec_ctx_->GetLockManager();
+
   Tuple old_tuple;
   auto updated = false;
 
@@ -36,15 +39,28 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
 
   auto u_tuple = GenerateUpdatedTuple(old_tuple);
   updated = table_info_->table_->UpdateTuple(u_tuple, *rid, exec_ctx_->GetTransaction());
+  if (txn->IsSharedLocked(*rid)) {
+    lck_mgr->LockUpgrade(txn, *rid);
+  } else {
+    lck_mgr->LockExclusive(txn, *rid);
+  }
 
   // if updated, need to insert into indexes
   if (updated && !index_infos_.empty()) {
+    auto w_record = TableWriteRecord(*rid, WType::UPDATE, u_tuple, table_info_->table_.get());
+    txn->GetWriteSet()->emplace_back(w_record);
+
     for (auto index : index_infos_) {
       auto key = old_tuple.KeyFromTuple(table_info_->schema_, index->key_schema_, index->index_->GetKeyAttrs());
       index->index_->DeleteEntry(key, *rid, exec_ctx_->GetTransaction());
 
       key = u_tuple.KeyFromTuple(table_info_->schema_, index->key_schema_, index->index_->GetKeyAttrs());
       index->index_->InsertEntry(key, *rid, exec_ctx_->GetTransaction());
+
+      auto wi_record =
+          IndexWriteRecord(*rid, table_info_->oid_, WType::UPDATE, u_tuple, index->index_oid_, exec_ctx_->GetCatalog());
+      wi_record.old_tuple_ = old_tuple;
+      txn->GetIndexWriteSet()->emplace_back(wi_record);
     }
   }
 
