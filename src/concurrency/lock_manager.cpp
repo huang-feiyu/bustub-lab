@@ -161,7 +161,7 @@ retry:
       if (mode == LockMode::EXCLUSIVE || itr->lock_mode_ == LockMode::EXCLUSIVE) {
         LOG_MINE("KillYoung: [%d] > %d, [%d] die", id, txn_id, id);
         txn->GetExclusiveLockSet()->erase(rid);
-        txn->GetExclusiveLockSet()->erase(rid);
+        txn->GetSharedLockSet()->erase(rid);
         txn->SetState(TransactionState::ABORTED);
         lck_reqs->request_queue_.erase(itr);
         lck_reqs->cv_.notify_all();

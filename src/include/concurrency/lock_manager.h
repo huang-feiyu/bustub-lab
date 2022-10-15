@@ -26,7 +26,7 @@
 #include "concurrency/transaction.h"
 
 // #define LOCK
-#define DEBUG
+// #define DEBUG
 
 #ifdef LOCK
 #define BIGLOCK() \
