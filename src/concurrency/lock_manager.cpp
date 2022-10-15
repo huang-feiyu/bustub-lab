@@ -33,6 +33,7 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
 
   // Insert into queue
   auto lck_reqs = InsertQueue(txn, rid, mode);
+  KillYoung(lck_reqs, txn_id, mode);
 
   // Can grant the txn?
   auto can_grant = [&]() {
@@ -49,8 +50,12 @@ bool LockManager::LockShared(Transaction *txn, const RID &rid) {
 
   std::mutex mutex;
   std::unique_lock cv_mutex{mutex};
-  while (!can_grant()) {
+  while (txn->GetState() != TransactionState::ABORTED || !can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
+  }
+  if (txn->GetState() == TransactionState::ABORTED) {
+    LOG_MINE("Deadlock");
+    throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
   }
 
   // Wait done, grant the lock
@@ -77,14 +82,19 @@ bool LockManager::LockExclusive(Transaction *txn, const RID &rid) {
 
   // Insert into queue
   auto lck_reqs = InsertQueue(txn, rid, mode);
+  KillYoung(lck_reqs, txn_id, mode);
 
   // Can grant the txn?
   auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
 
   std::mutex mutex;
   std::unique_lock cv_mutex{mutex};
-  while (!can_grant()) {
+  while (txn->GetState() != TransactionState::ABORTED || !can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
+  }
+  if (txn->GetState() == TransactionState::ABORTED) {
+    LOG_MINE("Deadlock");
+    throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
   }
 
   // Wait done, grant the lock
@@ -122,14 +132,19 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
   lck_reqs->upgrading_ = txn_id;
   // Update request to X-lock
   GetIterator(lck_reqs, txn_id)->lock_mode_ = mode;
+  KillYoung(lck_reqs, txn_id, mode);
 
   // Can grant the txn?
   auto can_grant = [&]() { return lck_reqs->request_queue_.front().txn_id_ == txn_id; };
 
   std::mutex mutex;
   std::unique_lock cv_mutex{mutex};
-  while (!can_grant()) {
+  while (txn->GetState() != TransactionState::ABORTED || !can_grant()) {
     lck_reqs->cv_.wait(cv_mutex);
+  }
+  if (txn->GetState() == TransactionState::ABORTED) {
+    LOG_MINE("Deadlock");
+    throw TransactionAbortException(txn_id, AbortReason::DEADLOCK);
   }
 
   // Wait done, grant the lock

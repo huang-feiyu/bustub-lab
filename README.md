@@ -79,3 +79,16 @@ In `Unlock`, the normal stuff is:
 2. Otherwise, remove request from queue
 3. Update txn state according to isolation level and remove from lock_set
 4. Notify all requests in the queue
+
+## Taksk #2: Deadlock Prevention
+
+Wound-Wait ("Young Waits for Old")
+* If requesting txn has higher priority (Older Timestamp) than holding txn,
+  then holding txn aborts and releases lock.
+* Otherwise requesting txn waits.
+
+In our case, it seems like *txn_id* determines the priorty of a txn.
+Bigger *txn_id* => Younger txn => Lower priorty
+
+What we need to do is: add a *KillYoung* before every locking operation.
+

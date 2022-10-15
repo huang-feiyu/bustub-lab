@@ -41,7 +41,7 @@
   fprintf(LOG_OUTPUT_STREAM, "\n");        \
   ::fflush(stdout)
 #else
-#define LOG_INFO(...) ((void)0)
+#define LOG_MINE(...) ((void)0)
 #endif
 
 namespace bustub {
@@ -134,15 +134,23 @@ class LockManager {
   /** Lock table for lock requests. */
   std::unordered_map<RID, LockRequestQueue> lock_table_;
 
+  /** Hash map for txn_id and txn. */
+  std::unordered_map<txn_id_t, Transaction *> txn_map_;
+
   /*===--- Helper Functions ---===*/
 
   /** Validate arguments when locking */
   bool ValidateLocking(Transaction *txn, LockMode mode) {
     auto txn_id = txn->GetTransactionId();
 
+    // Add to txn_map for Wound-Wait finding txn
+    if (txn_map_.count(txn_id) == 0) {
+      txn_map_[txn_id] = txn;
+    }
+
     // Cannot lock when txn is *aborted*
     if (txn->GetState() == TransactionState::ABORTED) {
-      LOG_DEBUG("Lock in aborted txn [%d]", txn_id);
+      LOG_MINE("Lock in aborted txn [%d]", txn_id);
       return false;
     }
 
@@ -200,6 +208,21 @@ class LockManager {
       }
     }
     return lck_reqs->request_queue_.end();
+  }
+
+  /** Kill all low priorty txns. Higher txn_id => Lower priorty */
+  void KillYoung(LockRequestQueue *lck_reqs, txn_id_t txn_id, LockMode mode) {
+    for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
+      auto id = itr->txn_id_;
+      if (id == txn_id) {
+        break;  // kill all young txns **before** requesting
+      }
+      if (id > txn_id) {
+        if (mode == LockMode::EXCLUSIVE || GetIterator(lck_reqs, id)->lock_mode_ == LockMode::SHARED) {
+          txn_map_[id]->SetState(TransactionState::ABORTED);
+        }
+      }
+    }
   }
 };
 
