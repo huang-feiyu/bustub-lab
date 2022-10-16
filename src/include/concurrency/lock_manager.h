@@ -184,6 +184,7 @@ class LockManager {
 
   /** Remove from request queue */
   LockRequestQueue *RemoveQueue(Transaction *txn, const RID &rid) {
+    std::scoped_lock<std::mutex> guard{latch_};
     // remove from request queue
     auto lck_reqs = &lock_table_[rid];
     lck_reqs->request_queue_.erase(GetIterator(lck_reqs, txn->GetTransactionId()));
@@ -193,8 +194,6 @@ class LockManager {
 
   /** Get iterator by rid */
   std::list<LockManager::LockRequest>::iterator GetIterator(LockRequestQueue *lck_reqs, txn_id_t txn_id) {
-    std::scoped_lock<std::mutex> guard{latch_};
-
     for (auto itr = lck_reqs->request_queue_.begin(); itr != lck_reqs->request_queue_.end(); itr++) {
       if (itr->txn_id_ == txn_id) {
         return itr;
