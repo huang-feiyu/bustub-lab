@@ -29,6 +29,7 @@
 * [Note19](./Notes/Note19.md): Multi-Version Concurrency Control
 * [Note20](./Notes/Note20.md): Database Logging
 * [Note21](./Notes/Note21.md): Database Recovery
+* [Note22](./Notes/Note22.md): Intro to Distributed Databases
 
 ## Homework
 
