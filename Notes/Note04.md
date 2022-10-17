@@ -54,8 +54,8 @@ Workloads
 
 Database Types
 
-* Traditional SQL: 更侧重 OLAP
-* NoSQL/NewSQL: 大多数更侧重 OLTP
+* Traditional SQL: 更侧重 OLTP
+* NoSQL/NewSQL: 大多数更侧重 OLAP
 
 Data Storage Models
 
