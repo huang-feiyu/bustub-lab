@@ -39,6 +39,7 @@
 * [HW2](./Homework/hw2.pdf): Indexes (**82/100**)
 * [HW3](./Homework/hw3.pdf): Join Algorithms (**100/100**)
 * [HW4](./Homework/hw4.pdf): Concurrency Control (**77/100**)
+* [HW5](./Homework/hw4.pdf): Distributed Databases (**110/120**)
 
 ## Assignments
 
