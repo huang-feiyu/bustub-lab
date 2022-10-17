@@ -31,6 +31,7 @@
 * [Note21](./Notes/Note21.md): Database Recovery
 * [Note22](./Notes/Note22.md): Intro to Distributed Databases
 * [Note23](./Notes/Note23.md): Distributed OLTP Databases
+* [Note24](./Notes/Note24.md): Distributed OLAP Databases
 
 ## Homework
 
