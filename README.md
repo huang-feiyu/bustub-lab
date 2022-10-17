@@ -49,3 +49,10 @@
 * [p3](https://github.com/huang-feiyu/bustub-labs/tree/p3): Query Execution (**360/360**)
 * [p4](https://github.com/huang-feiyu/bustub-labs/tree/p4): Concurrency Control (**100/100**)
 
+## Blogs
+
+> Published in [Tech Blog - Huang Blog](https://huangblog.com/).
+
+* [bustub0](https://telegra.ph/bustub-0-10-16): Disk Manager
+* [bustub1](https://telegra.ph/bustub-1-10-17): Buffer Pool Manager
+
