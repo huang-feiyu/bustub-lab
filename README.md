@@ -51,7 +51,7 @@
 
 ## Blogs
 
-> Published in [Tech Blog - Huang Blog](https://huangblog.com/).
+> Published by [Tech Blog - Huang Blog](https://huangblog.com/).
 
 * [bustub0](https://telegra.ph/bustub-0-10-16): Disk Manager
 * [bustub1](https://telegra.ph/bustub-1-10-17): Buffer Pool Manager
