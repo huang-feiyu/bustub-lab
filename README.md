@@ -2,6 +2,12 @@
 
 > 2021 Fall: Introduction to Database
 
+Strongly **recommend:** 2022 assignments. There are:
+1. SQL (planner & parser)
+2. Tries Tree (instead of silly matrix operation)
+3. B+Tree (and also hash table)
+4. Query Optimization (and also executors)
+
 * [Homepage](https://15445.courses.cs.cmu.edu/fall2021)
 * [Assignments](https://15445.courses.cs.cmu.edu/fall2021/assignments.html)
 * [Videos](https://www.youtube.com/watch?v=oeYBdghaIjc&list=PLSE8ODhjZXjbohkNBWQs_otTrBTrjyohi) (2019 fall)
